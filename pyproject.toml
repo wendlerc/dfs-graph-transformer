@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "graph-transformer"
+version = "0.1.0"
+description = "Implementation of a graph transformer, which acts on graphs via their representation as minimal DFS codes."
+authors = ["Chris Wendler <chris.wendler@inf.ethz.ch>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+torch-geometric = "^1.7.2"
+torch = "^1.9.0"
+numpy = "^1.21.0"
+matplotlib = "^3.4.2"
+tqdm = "^4.61.1"
+pandas = "^1.2.5"
+jupyter = "^1.0.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
