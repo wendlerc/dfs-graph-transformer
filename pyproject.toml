@@ -15,6 +15,7 @@ pandas = "^1.2.5"
 jupyter = "^1.0.0"
 ase = "^3.22.0"
 schnetpack = "^0.3"
+pybind11 = "^2.6.2"
 
 [tool.poetry.dev-dependencies]
 
