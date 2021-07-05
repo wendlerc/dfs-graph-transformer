@@ -964,6 +964,17 @@ sparql = ["requests"]
 tests = ["html5lib", "networkx", "nose", "doctest-ignore-unicode"]
 
 [[package]]
+name = "rdkit-pypi"
+version = "2021.3.3"
+description = "A collection of chemoinformatics and machine-learning software written in C++ and Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+numpy = ">=1.19"
+
+[[package]]
 name = "requests"
 version = "2.25.1"
 description = "Python HTTP for Humans."
@@ -1254,7 +1265,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "556c8e580fbbc9a7886ea16ec27f97457543d134c072ffd917a48bbd5a5f50f7"
+content-hash = "b016dbd613f990799bf82a3d1a701b2aa6f99cba3bd01d859a36526cd6aad9d9"
 
 [metadata.files]
 appnope = [
@@ -1966,6 +1977,16 @@ qtpy = [
 rdflib = [
     {file = "rdflib-5.0.0-py3-none-any.whl", hash = "sha256:88208ea971a87886d60ae2b1a4b2cdc263527af0454c422118d43fe64b357877"},
     {file = "rdflib-5.0.0.tar.gz", hash = "sha256:78149dd49d385efec3b3adfbd61c87afaf1281c30d3fcaf1b323b34f603fb155"},
+]
+rdkit-pypi = [
+    {file = "rdkit_pypi-2021.3.3-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:fc96eec13a1f9d2dd157ca17d28bb8f05db40d31b61d6814b3d492b081e93507"},
+    {file = "rdkit_pypi-2021.3.3-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:2c2feadbf1b90400f8f44665951f329ac9a84ff8779fc1d5cc10f0c86590b5d8"},
+    {file = "rdkit_pypi-2021.3.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:c2852504dcb405e39042ed202af1978046cd0d218c69d3bded54683fed3b4f2f"},
+    {file = "rdkit_pypi-2021.3.3-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:09fbdd20902f9079ac683bdb8fa348f0add3ccab6784b6fc37160fd87b793884"},
+    {file = "rdkit_pypi-2021.3.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:9600c1033e4a4bd58ea598a881d2c764046bda4383d3cf27b8dbf8ec069deb19"},
+    {file = "rdkit_pypi-2021.3.3-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:6c8f6853b1a055d9bd643d327916e25a8e030f19f22414482e8f1f73104b8610"},
+    {file = "rdkit_pypi-2021.3.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:8b3accdae5b84361311510c7b498773ce1ad2553991dd9d3858a95930d33570b"},
+    {file = "rdkit_pypi-2021.3.3-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:2c58ad8a17569c0cd3abc1ae86f0c0ecc8e591fdb211560571d03a1bdfe2a38f"},
 ]
 requests = [
     {file = "requests-2.25.1-py2.py3-none-any.whl", hash = "sha256:c210084e36a42ae6b9219e00e48287def368a26d03a048ddad7bfee44f75871e"},
