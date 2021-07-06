@@ -18,7 +18,7 @@ schnetpack = "^0.3"
 pybind11 = "^2.6.2"
 func-timeout = "^4.3.5"
 sacred = "0.8.2"
-rdkit-pypi = "^2021.3.3"
+wandb = "^0.10.33"
 
 [tool.poetry.dev-dependencies]
 
