@@ -7,7 +7,6 @@ from setuptools import setup
 __version__ = "0.0.1"
 
 
-
 setup(
     name="dfs_transformer",
     version=__version__,
@@ -15,7 +14,7 @@ setup(
     author_email="chris.wendler@inf.ethz.ch",
     description="Transformers operating on minimal DFS codes.",
     long_description="",
-    zip_safe=False,
     packages=setuptools.find_packages(where = 'src'),
-    package_dir = {"":"src"}
+    package_dir = {"":"src"},
+    include_package_data=True,
 )
