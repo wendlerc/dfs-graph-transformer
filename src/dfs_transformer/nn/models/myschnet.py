@@ -92,11 +92,12 @@ class MySchNet(torch.nn.Module):
     def __init__(self, hidden_channels=128, num_filters=128,
                  num_interactions=6, num_gaussians=50, cutoff=10.0,
                  readout='add', dipole=False, mean=None, std=None,
-                 atomref=None, use_dfs_codes=False):
+                 atomref=None, use_dfs_codes=False, dfs_before_interaction=False):
         super(MySchNet, self).__init__()
 
         import ase
 
+        self.dfs_before_interaction = dfs_before_interaction
         self.hidden_channels = hidden_channels
         self.num_filters = num_filters
         self.num_interactions = num_interactions
@@ -161,6 +162,9 @@ class MySchNet(torch.nn.Module):
         batch = torch.zeros_like(z) if batch is None else batch
 
         h = self.embedding(z)
+        if self.dfs_before_interaction:
+            if dfs is not None and self.dfs_emb is not None:
+                h += self.dfs_emb(dfs)
 
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch)
         row, col = edge_index
@@ -170,8 +174,9 @@ class MySchNet(torch.nn.Module):
         for interaction in self.interactions:
             h = h + interaction(h, edge_index, edge_weight, edge_attr)
         
-        if dfs is not None and self.dfs_emb is not None:
-            h += self.dfs_emb(dfs)
+        if not self.dfs_before_interaction:
+            if dfs is not None and self.dfs_emb is not None:
+                h += self.dfs_emb(dfs)
         
         if self.readout == 'attention':
             h = self.attention(h, batch)
