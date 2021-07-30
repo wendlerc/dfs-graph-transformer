@@ -13,7 +13,7 @@ pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.9.0+c
 git pull https://gitlab.inf.ethz.ch/ewszola/dfs-code-representation
 cd dfs-code-representation
 git checkout vertexids
-pip install . --user
+pip install . 
 
 ```
 
