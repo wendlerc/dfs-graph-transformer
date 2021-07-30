@@ -4,7 +4,7 @@ N_CORES=$2
 MAX_NODES=$4
 TIME_LIMIT=$3
 
-for i in {0..64}
+for i in {0..63}
 do
 if [ $(((($i+1)) % $N_CORES)) -eq 0 ]
 then 
