@@ -51,6 +51,9 @@ def main(nr, max_nodes, time_limit, log_level, _run, _log):
         except func_timeout.FunctionTimedOut:
             exp.log_scalar('timeout_index', data.name)
             logging.warning('Computing the minimal DFS code of %s timed out with a timelimit of %d seconds.'%(data.name, time_limit))
+        except:
+            logging.warning('%s failed'%data.name)
+            exp.log_scalar('failed', data.name)
         dfs_codes[data.name] = {'min_dfs_code':code, 'dfs_index':dfs_index}
         
     with NamedTemporaryFile(suffix='.json', delete=True) as f:
