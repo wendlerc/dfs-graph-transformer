@@ -21,11 +21,12 @@ exp = Experiment('compute minimum dfs codes')
 @exp.config
 def cfg(_log):
     nr = 0
+    max_nodes = np.inf
     time_limit = 60
-    log_level = logging.WARN
+    log_level = logging.INFO
 
 @exp.automain
-def main(nr, time_limit, log_level, _run, _log):
+def main(nr, max_nodes, time_limit, log_level, _run, _log):
     logging.basicConfig(level=log_level)
     path = 'datasets/ChEMBL/preprocessedPlusHs_split%d.pt'%nr
     dataset = ChEMBL(path)
@@ -34,6 +35,10 @@ def main(nr, time_limit, log_level, _run, _log):
     
     for data in tqdm.tqdm(dataset):
         vertex_labels = data.z.detach().cpu().numpy().tolist()
+        if len(vertex_labels) > max_nodes:
+            exp.log_scalar('skipped', data.name)
+            logging.info('skipped %s'%data.name)
+            continue
         edge_features = data.edge_attr.detach().cpu().numpy()
         edge_labels = np.argmax(edge_features, axis=1).tolist()
         try:
@@ -46,6 +51,9 @@ def main(nr, time_limit, log_level, _run, _log):
         except func_timeout.FunctionTimedOut:
             exp.log_scalar('timeout_index', data.name)
             logging.warning('Computing the minimal DFS code of %s timed out with a timelimit of %d seconds.'%(data.name, time_limit))
+        except:
+            logging.warning('%s failed'%data.name)
+            exp.log_scalar('failed', data.name)
         dfs_codes[data.name] = {'min_dfs_code':code, 'dfs_index':dfs_index}
         
     with NamedTemporaryFile(suffix='.json', delete=True) as f:
