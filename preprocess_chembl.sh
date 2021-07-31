@@ -12,4 +12,5 @@ then
 else
     python scripts/chembl/compute_dfs_codes.py with nr=$i time_limit=$TIME_LIMIT max_nodes=$MAX_NODES -F $DIR &
 fi
+sleep 1;
 done
