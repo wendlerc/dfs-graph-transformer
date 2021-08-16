@@ -24,11 +24,15 @@ def cfg(_log):
     max_nodes = np.inf
     time_limit = 60
     log_level = logging.INFO
+    use_Hs = True
 
 @exp.automain
-def main(nr, max_nodes, time_limit, log_level, _run, _log):
+def main(nr, max_nodes, time_limit, log_level, use_Hs, _run, _log):
     logging.basicConfig(level=log_level)
-    path = 'datasets/ChEMBL/preprocessedPlusHs_split%d.pt'%nr
+    if use_Hs:
+        path = 'datasets/ChEMBL/preprocessedPlusHs_split%d.pt'%nr
+    else:
+        path = 'datasets/ChEMBL/preprocessedNoHs_split%d.pt'%nr
     dataset = ChEMBL(path)
     
     dfs_codes = {}
