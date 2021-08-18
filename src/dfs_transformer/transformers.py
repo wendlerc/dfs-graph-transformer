@@ -60,22 +60,41 @@ class DFSCodeEncoder(nn.Module):
     #C = batch of codes
     #N = batch of node features
     #E = batch of edge features
-    def prepare_tokens(self, C, N, E):
+    def prepare_tokens(self, C, N, E, eos=None):
+        """
+        TODO: refactor
+        """
         src = []
+        if eos is not None:
+            eos_idx = []
+        else:
+            eos_idx = None
+            
         for code, n_feats, e_feats in zip(C, N, E):
             atom_emb, bond_emb = self.emb_atom(n_feats), self.emb_bond(e_feats)
-            src.append(torch.cat((self.dfs_emb[code[:, 0]], self.dfs_emb[code[:, 1]], 
-                                  atom_emb[code[:, -3]], bond_emb[code[:, -2]], atom_emb[code[:,-1]]), dim=1))
+            code_emb = torch.cat((self.dfs_emb[code[:, 0]], self.dfs_emb[code[:, 1]], 
+                                  atom_emb[code[:, -3]], bond_emb[code[:, -2]], atom_emb[code[:,-1]]), dim=1)
+            if eos is not None:
+                eos_idx.append(code_emb.shape[0])
+                code_emb = torch.cat((code_emb, eos.view(1,-1)), dim=0)
+            src.append(code_emb)
         batch = self.emb_seq(nn.utils.rnn.pad_sequence(src) * math.sqrt(self.ninp))
-        return batch
+        if eos is not None:
+            eos_idx = torch.tensor(eos_idx, device=C.device, dtype=torch.long)
+        return batch, eos_idx
 
-    def forward(self, C, N, E, class_token=None):
+
+    def forward(self, C, N, E, class_token=None, eos=None):
+        batch, eos_idx = self.prepare_tokens(C, N, E, eos=eos)
+        # batch is of shape (sequence length, batch, d_model)
         if class_token is None:
-            self_attn = self.enc(self.prepare_tokens(C, N, E))
+            self_attn = self.enc(batch)
         else:
-            batch = self.prepare_tokens(C, N, E)
             self_attn = self.enc(torch.cat((class_token.expand(-1, batch.shape[1], -1), batch), dim=0))
-        return self_attn
+        if eos_idx is not None:
+            return self_attn, eos_idx
+        else:
+            return self_attn
 
 
 class DFSCodeClassifier(nn.Module):
@@ -94,3 +113,41 @@ class DFSCodeClassifier(nn.Module):
     def forward(self, C, N, E):
         self_attn = self.encoder(C, N, E, class_token=self.cls_token)
         return self.fc_out(self_attn[0])
+    
+    
+class DFSCodeSeq2SeqFC(nn.Module):
+    def __init__(self, n_atoms, n_bonds, emb_dim, nhead, nlayers, dim_feedforward=2048, max_nodes=400, max_edges=400, 
+                 atom_encoder=None, bond_encoder=None):
+        super().__init__()
+        self.ninp = emb_dim * 5
+        self.encoder = DFSCodeEncoder(emb_dim, nhead, nlayers, dim_feedforward=dim_feedforward,
+                                      max_nodes=max_nodes, max_edges=max_edges, 
+                                      atom_encoder=atom_encoder, bond_encoder=bond_encoder)
+        self.fc_dfs_idx1 = nn.Linear(self.ninp, max_nodes)
+        self.fc_dfs_idx2 = nn.Linear(self.ninp, max_nodes)
+        self.fc_atom1 = nn.Linear(self.ninp, n_atoms)
+        self.fc_atom2 = nn.Linear(self.ninp, n_atoms)
+        self.fc_bond = nn.Linear(self.ninp, n_bonds)
+        self.fc_eos = nn.Linear(self.ninp, 1)
+        
+        self.eos = nn.Parameter(torch.empty(self.ninp), requires_grad=True)
+        nn.init.normal_(self.eos, mean=.0, std=.5)
+        
+
+    def forward(self, C, N, E):
+        self_attn, eos_idx = self.encoder(C, N, E, eos=self.eos) # seq x batch x feat
+        self_attn = self_attn.permute(1,0,2) # batch x seq x feat
+        dfs_idx1_logits = self.fc_dfs_idx1(self_attn).permute(1,0,2) #seq x batch x feat
+        dfs_idx2_logits = self.fc_dfs_idx2(self_attn).permute(1,0,2)
+        atom1_logits = self.fc_atom1(self_attn).permute(1,0,2)
+        atom2_logits = self.fc_atom2(self_attn).permute(1,0,2)
+        bond_logits = self.fc_bond(self_attn).permute(1,0,2)
+        eos_logits = self.fc_eos(self_attn).permute(1,0,2)
+        return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, eos_logits
+    
+    
+    def encode(self, C, N, E):
+        self_attn, eos_idx = self.encoder(C, N, E, eos=self.eos) # seq x batch x feat
+        return self_attn[eos_idx]
+        
+    
