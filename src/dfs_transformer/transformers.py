@@ -80,7 +80,7 @@ class DFSCodeEncoder(nn.Module):
             src.append(code_emb)
         batch = self.emb_seq(nn.utils.rnn.pad_sequence(src) * math.sqrt(self.ninp))
         if eos is not None:
-            eos_idx = torch.tensor(eos_idx, device=C.device, dtype=torch.long)
+            eos_idx = torch.tensor(eos_idx, device=C[0].device, dtype=torch.long)
         return batch, eos_idx
 
 
@@ -148,6 +148,12 @@ class DFSCodeSeq2SeqFC(nn.Module):
     
     def encode(self, C, N, E):
         self_attn, eos_idx = self.encoder(C, N, E, eos=self.eos) # seq x batch x feat
-        return self_attn[eos_idx]
+        idx = torch.arange(len(eos_idx), device=C[0].device)
+        return torch.cat((self_attn[eos_idx, idx], torch.mean(self_attn, axis=0)), axis=1)
+        #res = []
+        #for idx, eidx in enumerate(eos_idx.detach().cpu().numpy()):
+        #    res += [self_attn.detach().cpu().numpy()[eidx, idx].tolist()]
+        #return torch.tensor(res, device=C[0].device)
+        
         
     
