@@ -93,7 +93,7 @@ class Deepchem2TorchGeometric(Dataset):
     def __init__(self, deepchem_smiles_dataset, taskid=0, useHs=False, precompute_min_dfs=True):
         self.deepchem = deepchem_smiles_dataset
         self.smiles = deepchem_smiles_dataset.X
-        self.labels = deepchem_smiles_dataset.y[:, taskid]
+        self.labels = deepchem_smiles_dataset.y[:, taskid][:, np.newaxis]
         self.w = deepchem_smiles_dataset.w
         self.useHs = useHs
         self.precompute_min_dfs=precompute_min_dfs
