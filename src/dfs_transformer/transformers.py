@@ -149,7 +149,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
     def encode(self, C, N, E):
         self_attn, eos_idx = self.encoder(C, N, E, eos=self.eos) # seq x batch x feat
         idx = torch.arange(len(eos_idx), device=C[0].device)
-        return torch.cat((self_attn[eos_idx, idx], torch.mean(self_attn, axis=0)), axis=1)
+        return torch.cat((self_attn[eos_idx, idx], torch.mean(self_attn, dim=0), torch.max(self_attn, dim=0)[0]), axis=1)
         #res = []
         #for idx, eidx in enumerate(eos_idx.detach().cpu().numpy()):
         #    res += [self_attn.detach().cpu().numpy()[eidx, idx].tolist()]
