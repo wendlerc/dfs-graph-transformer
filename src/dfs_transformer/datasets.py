@@ -58,7 +58,15 @@ types = {'C': 0,
  'Kr': 29,
  'Cs': 30,
  'Xe': 31,
- 'He': 32}
+ 'He': 32,#ChEMBL end
+ 'Au': 33,
+ 'Sn': 34,
+ 'Hg': 35,
+ 'Ge': 36,
+ 'Sb': 37,
+ 'Pb': 38,
+ 'Cu': 39,
+ }
 bonds =  {rdkit.Chem.rdchem.BondType.SINGLE: 0,
  rdkit.Chem.rdchem.BondType.DOUBLE: 1,
  rdkit.Chem.rdchem.BondType.AROMATIC: 2,
@@ -82,10 +90,10 @@ def collate_minc_rndc_y(dlist):
     return rnd_code_batch, min_code_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
 
 class Deepchem2TorchGeometric(Dataset):
-    def __init__(self, deepchem_smiles_dataset, useHs=False, precompute_min_dfs=True):
+    def __init__(self, deepchem_smiles_dataset, taskid=0, useHs=False, precompute_min_dfs=True):
         self.deepchem = deepchem_smiles_dataset
         self.smiles = deepchem_smiles_dataset.X
-        self.labels = deepchem_smiles_dataset.y
+        self.labels = deepchem_smiles_dataset.y[:, taskid]
         self.w = deepchem_smiles_dataset.w
         self.useHs = useHs
         self.precompute_min_dfs=precompute_min_dfs
@@ -101,7 +109,6 @@ class Deepchem2TorchGeometric(Dataset):
                 mol = Chem.rdmolops.AddHs(mol)        
             N = mol.GetNumAtoms()
 
-            type_idx = []
             atomic_number = []
             aromatic = []
             sp = []
@@ -109,7 +116,6 @@ class Deepchem2TorchGeometric(Dataset):
             sp3 = []
             num_hs = []
             for atom in mol.GetAtoms():
-                type_idx.append(types[atom.GetSymbol()])
                 atomic_number.append(atom.GetAtomicNum())
                 aromatic.append(1 if atom.GetIsAromatic() else 0)
                 hybridization = atom.GetHybridization()
@@ -119,7 +125,6 @@ class Deepchem2TorchGeometric(Dataset):
 
             z = torch.tensor(atomic_number, dtype=torch.long)
 
-            type_idx = np.asarray(type_idx)
             atomic_number = np.asarray(atomic_number)
             aromatic = np.asarray(atomic_number)
             sp = np.asarray(sp)
@@ -148,10 +153,8 @@ class Deepchem2TorchGeometric(Dataset):
             hs = (z == 1).to(torch.float)
             num_hs = scatter(hs[row], col, dim_size=N).tolist()
 
-            x1 = F.one_hot(torch.tensor(type_idx), num_classes=len(types))
-            x2 = torch.tensor([atomic_number, aromatic, sp, sp2, sp3, num_hs],
+            x = torch.tensor([atomic_number, aromatic, sp, sp2, sp3, num_hs],
                               dtype=torch.float).t().contiguous()
-            x = torch.cat([x1.to(torch.float), x2], dim=-1)
 
             # only keep largest connected component
             edges_coo = edge_index.detach().cpu().numpy().T
@@ -177,6 +180,9 @@ class Deepchem2TorchGeometric(Dataset):
             
             d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
                             edge_attr=edge_attr, y=torch.tensor(self.labels[idx]))
+            if len(edge_attr) == 0:
+                continue 
+            
             min_code, min_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                          d.z.numpy().tolist(), 
                                                                          np.argmax(d.edge_attr.numpy(), axis=1))
@@ -187,7 +193,7 @@ class Deepchem2TorchGeometric(Dataset):
     
 
     def __len__(self):
-        return len(self.smiles)
+        return len(self.data)
   
     def __getitem__(self, idx):
         return self.data[idx]
