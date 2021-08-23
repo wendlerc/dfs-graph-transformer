@@ -79,7 +79,7 @@ def collate_minc_rndc_y(dlist):
         rnd_code_batch += [torch.tensor(rnd_code)]
         min_code_batch += [d.min_dfs_code]
         y_batch += [d.y]
-    return rnd_code_batch, min_code_batch, z_batch, edge_attr_batch, y_batch
+    return rnd_code_batch, min_code_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
 
 class Deepchem2TorchGeometric(Dataset):
     def __init__(self, deepchem_smiles_dataset, useHs=False, precompute_min_dfs=True):
@@ -168,10 +168,10 @@ class Deepchem2TorchGeometric(Dataset):
             edges_cc = []
             edge_feats = []
             old2new = {old:new for new, old in enumerate(node_ids)}
-            for idx, (u, v) in enumerate(edges_coo):
+            for idx2, (u, v) in enumerate(edges_coo):
                 if u in node_ids and v in node_ids:
                     edges_cc += [[old2new[u], old2new[v]]]
-                    edge_feats += [edge_attr[idx].numpy().tolist()]
+                    edge_feats += [edge_attr[idx2].numpy().tolist()]
             edge_index = torch.tensor(edges_cc, dtype=torch.long)
             edge_attr = torch.tensor(edge_feats, dtype=torch.float)
             
