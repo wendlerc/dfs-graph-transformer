@@ -90,7 +90,9 @@ def collate_minc_rndc_y(dlist):
     return rnd_code_batch, min_code_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
 
 class Deepchem2TorchGeometric(Dataset):
-    def __init__(self, deepchem_smiles_dataset, taskid=0, useHs=False, precompute_min_dfs=True):
+    def __init__(self, deepchem_smiles_dataset, taskid=0,
+                 max_edges=np.inf, max_nodes=np.inf,
+                 useHs=False, precompute_min_dfs=True):
         self.deepchem = deepchem_smiles_dataset
         self.smiles = deepchem_smiles_dataset.X
         self.labels = deepchem_smiles_dataset.y[:, taskid][:, np.newaxis]
@@ -98,6 +100,8 @@ class Deepchem2TorchGeometric(Dataset):
         self.useHs = useHs
         self.precompute_min_dfs=precompute_min_dfs
         self.data = []
+        self.max_edges = max_edges
+        self.max_nodes = max_nodes
         self.prepare()
   
     
@@ -123,7 +127,10 @@ class Deepchem2TorchGeometric(Dataset):
                 sp2.append(1 if hybridization == HybridizationType.SP2 else 0)
                 sp3.append(1 if hybridization == HybridizationType.SP3 else 0)
 
+            if len(atomic_number) > self.max_nodes:
+                continue
             z = torch.tensor(atomic_number, dtype=torch.long)
+            
 
             atomic_number = np.asarray(atomic_number)
             aromatic = np.asarray(atomic_number)
@@ -138,7 +145,8 @@ class Deepchem2TorchGeometric(Dataset):
                 row += [start, end]
                 col += [end, start]
                 edge_type += 2 * [bonds[bond.GetBondType()]]
-
+            if len(edge_type) > 2*self.max_edges:
+                continue
             edge_index = torch.tensor([row, col], dtype=torch.long)
             edge_type = torch.tensor(edge_type, dtype=torch.long)
             edge_attr = F.one_hot(edge_type,
