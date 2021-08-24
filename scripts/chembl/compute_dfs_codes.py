@@ -91,7 +91,7 @@ def main(nr, max_nodes, time_limit, log_level, use_Hs, _run, _log):
         edge_labels = np.argmax(edge_features, axis=1).tolist()
         try:
             time1 = time.time()
-            code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(data, vertex_labels, edge_labels, time_limit=time_limit)            
+            code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(data, vertex_labels, edge_labels, timeout=time_limit)            
             time2 = time.time()
             exp.log_scalar('time %s'%data.name, time2-time1)
             dfs_codes[data.name] = {'min_dfs_code':code, 'dfs_index':dfs_index}
