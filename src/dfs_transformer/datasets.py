@@ -91,7 +91,7 @@ def collate_minc_rndc_y(dlist):
 
 class Deepchem2TorchGeometric(Dataset):
     def __init__(self, deepchem_smiles_dataset, taskid=0,
-                 max_edges=np.inf, max_nodes=np.inf,
+                 max_edges=np.inf, max_nodes=np.inf, onlyRandom=False,
                  useHs=False, precompute_min_dfs=True):
         self.deepchem = deepchem_smiles_dataset
         self.smiles = deepchem_smiles_dataset.X
@@ -102,6 +102,7 @@ class Deepchem2TorchGeometric(Dataset):
         self.data = []
         self.max_edges = max_edges
         self.max_nodes = max_nodes
+        self.onlyRandom = onlyRandom
         self.prepare()
   
     
@@ -191,9 +192,15 @@ class Deepchem2TorchGeometric(Dataset):
             if len(edge_attr) == 0:
                 continue 
             
-            min_code, min_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
+            if self.onlyRandom:
+                min_code, min_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
                                                                          d.z.numpy().tolist(), 
                                                                          np.argmax(d.edge_attr.numpy(), axis=1))
+            else:
+                min_code, min_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
+                                                                         d.z.numpy().tolist(), 
+                                                                         np.argmax(d.edge_attr.numpy(), axis=1))
+                
             self.data += [Data(x=x, z=z, pos=None, edge_index=edge_index.T,
                             edge_attr=edge_attr, y=torch.tensor(self.labels[idx]),
                             min_dfs_code=torch.tensor(min_code), min_dfs_index=torch.tensor(min_index))]
