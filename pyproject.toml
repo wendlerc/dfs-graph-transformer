@@ -24,6 +24,7 @@ focal-loss-torch = "^0.0.7"
 deepchem = "^2.5.0"
 numpy = "1.19.3"
 tensorflow = "^2.6.0"
+rdkit-pypi = "^2021.3.4"
 
 [tool.poetry.dev-dependencies]
 
