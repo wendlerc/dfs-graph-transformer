@@ -91,16 +91,10 @@ def main(nr, max_nodes, time_limit, log_level, use_Hs, _run, _log):
         edge_labels = np.argmax(edge_features, axis=1).tolist()
         try:
             time1 = time.time()
-            code, dfs_index = func_timeout.func_timeout(time_limit, 
-                                                     dfs_code.min_dfs_code_from_torch_geometric,
-                                                     args=[data, vertex_labels, edge_labels])            
+            code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(data, vertex_labels, edge_labels, timeout=time_limit)            
             time2 = time.time()
             exp.log_scalar('time %s'%data.name, time2-time1)
             dfs_codes[data.name] = {'min_dfs_code':code, 'dfs_index':dfs_index}
-        except func_timeout.FunctionTimedOut:
-            exp.log_scalar('timeout_index', data.name)
-            logging.warning('Computing the minimal DFS code of %s timed out with a timelimit of %d seconds.'%(data.name, time_limit))
-            continue
         except:
             logging.warning('%s failed'%data.name)
             exp.log_scalar('failed', data.name)
@@ -112,5 +106,4 @@ def main(nr, max_nodes, time_limit, log_level, use_Hs, _run, _log):
             json.dump(dfs_codes, ff)
         _run.add_artifact(f.name, 'min_dfs_codes_split%d.json'%(nr))
         
-    return dfs_codes
 
