@@ -112,5 +112,4 @@ def main(nr, max_nodes, time_limit, log_level, use_Hs, _run, _log):
             json.dump(dfs_codes, ff)
         _run.add_artifact(f.name, 'min_dfs_codes_split%d.json'%(nr))
         
-    return dfs_codes
 
