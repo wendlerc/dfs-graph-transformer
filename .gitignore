@@ -1,4 +1,6 @@
 # my stuff
+*.pt
+*wandb*
 */wandb/*
 results/*
 datasets/*
