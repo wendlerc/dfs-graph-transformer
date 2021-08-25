@@ -34,14 +34,14 @@ class PositionalEncoding(nn.Module):
 
 class DFSCodeEncoder(nn.Module):
     def __init__(self, emb_dim, nhead, nlayers, dim_feedforward=2048, max_nodes=400, max_edges=400, 
-                 atom_encoder=None, bond_encoder=None):
+                 atom_encoder=None, bond_encoder=None, dropout=0.1):
         super().__init__()
         self.ninp = emb_dim * 5
         self.emb_dfs = PositionalEncoding(emb_dim, dropout=0, max_len=max_nodes)
         dfs_emb = self.emb_dfs(torch.zeros((max_nodes, 1, emb_dim)))
         dfs_emb = torch.squeeze(dfs_emb)
         self.register_buffer('dfs_emb', dfs_emb)
-        self.emb_seq = PositionalEncoding(self.ninp, max_len=max_edges)
+        self.emb_seq = PositionalEncoding(self.ninp, max_len=max_edges, dropout=dropout)
         
         if atom_encoder is None:
             self.emb_atom = AtomEncoder(emb_dim=emb_dim)
@@ -57,7 +57,8 @@ class DFSCodeEncoder(nn.Module):
         
         self.enc = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=self.ninp, 
                                                                     nhead=nhead,
-                                                                    dim_feedforward=dim_feedforward), nlayers)
+                                                                    dim_feedforward=dim_feedforward,
+                                                                    dropout=dropout), nlayers)
     #for hugos dataloader:
     #C = batch of codes
     #N = batch of node features
@@ -123,12 +124,12 @@ class DFSCodeClassifier(nn.Module):
     
 class DFSCodeSeq2SeqFC(nn.Module):
     def __init__(self, n_atoms, n_bonds, emb_dim, nhead, nlayers, dim_feedforward=2048, max_nodes=400, max_edges=400, 
-                 atom_encoder=None, bond_encoder=None):
+                 atom_encoder=None, bond_encoder=None, dropout=0.1):
         super().__init__()
         self.ninp = emb_dim * 5
         self.encoder = DFSCodeEncoder(emb_dim, nhead, nlayers, dim_feedforward=dim_feedforward,
                                       max_nodes=max_nodes, max_edges=max_edges, 
-                                      atom_encoder=atom_encoder, bond_encoder=bond_encoder)
+                                      atom_encoder=atom_encoder, bond_encoder=bond_encoder, dropout=dropout)
         self.fc_dfs_idx1 = nn.Linear(2*self.ninp, max_nodes)
         self.fc_dfs_idx2 = nn.Linear(2*self.ninp, max_nodes)
         self.fc_atom1 = nn.Linear(2*self.ninp, n_atoms)

@@ -32,7 +32,7 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     with open(smiles_file, "r") as f:
-        for idx, smiles in enumerate(f.readlines()):
+        for idx, smiles in tqdm.tqdm(enumerate(f.readlines())):
             if idx % total == nr:
                 d = smiles2graph(smiles, use_Hs, max_nodes, max_edges)
                 try:
