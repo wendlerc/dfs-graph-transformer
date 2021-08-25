@@ -2,7 +2,7 @@
   "log_level": 30,
   "n_graphs": 2060,
   "path": "datasets/qm9_torch_geometric/",
-  "seed": 792895010,
-  "start": 26780,
+  "seed": 665530983,
+  "start": 53560,
   "time_limit": 60
 }
