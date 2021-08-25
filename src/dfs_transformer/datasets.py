@@ -184,13 +184,26 @@ class Deepchem2TorchGeometric(Dataset):
                 if u in node_ids and v in node_ids:
                     edges_cc += [[old2new[u], old2new[v]]]
                     edge_feats += [edge_attr[idx2].numpy().tolist()]
+                    
             edge_index = torch.tensor(edges_cc, dtype=torch.long)
             edge_attr = torch.tensor(edge_feats, dtype=torch.float)
             
+            # add loops for unconnected molecules / single atoms
+            if len(edge_feats) == 0:
+                for vidx, atomic_number in enumerate(z.numpy()):
+                    edges_cc += [[vidx, vidx]]
+                    edge_feats += [0] 
+                edge_type = torch.tensor(edge_feats, dtype=torch.long)
+                edge_attr = F.one_hot(edge_type,
+                                      num_classes=len(bonds)).to(torch.float)
+                
+                edge_index = torch.tensor(edges_cc, dtype=torch.long)
+            
+            
+            
             d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
                             edge_attr=edge_attr, y=torch.tensor(self.labels[idx]))
-            if len(edge_attr) == 0:
-                continue 
+            
             
             if self.onlyRandom:
                 min_code, min_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 

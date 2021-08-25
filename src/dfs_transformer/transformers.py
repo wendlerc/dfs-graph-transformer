@@ -158,9 +158,27 @@ class DFSCodeSeq2SeqFC(nn.Module):
     
     
     def encode(self, C, N, E):
+        """
+        
+
+        Parameters
+        ----------
+        C : TYPE
+            DESCRIPTION.
+        N : TYPE
+            DESCRIPTION.
+        E : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        self_attn : all hidden states
+        cls token
+        eos token
+        """
         self_attn, eos_idx = self.encoder(C, N, E, class_token=self.cls_token, eos=self.eos) # seq x batch x feat
         idx = torch.arange(len(eos_idx), device=C[0].device)
-        return torch.cat((self_attn[eos_idx, idx], torch.mean(self_attn, dim=0), torch.max(self_attn, dim=0)[0]), axis=1)
+        return self_attn, self_attn[0], self_attn[eos_idx, idx]
 
 
 
