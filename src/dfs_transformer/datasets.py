@@ -72,6 +72,105 @@ bonds =  {rdkit.Chem.rdchem.BondType.SINGLE: 0,
  rdkit.Chem.rdchem.BondType.AROMATIC: 2,
  rdkit.Chem.rdchem.BondType.TRIPLE: 3}
 
+def smiles2graph(smiles, useHs=False, max_nodes=100, max_edges=200):
+    mol = Chem.MolFromSmiles(smiles)
+    if useHs:
+        mol = Chem.rdmolops.AddHs(mol)        
+    N = mol.GetNumAtoms()
+
+    atomic_number = []
+    aromatic = []
+    sp = []
+    sp2 = []
+    sp3 = []
+    num_hs = []
+    for atom in mol.GetAtoms():
+        atomic_number.append(atom.GetAtomicNum())
+        aromatic.append(1 if atom.GetIsAromatic() else 0)
+        hybridization = atom.GetHybridization()
+        sp.append(1 if hybridization == HybridizationType.SP else 0)
+        sp2.append(1 if hybridization == HybridizationType.SP2 else 0)
+        sp3.append(1 if hybridization == HybridizationType.SP3 else 0)
+
+    if len(atomic_number) > max_nodes:
+        return None
+    z = torch.tensor(atomic_number, dtype=torch.long)
+    
+
+    atomic_number = np.asarray(atomic_number)
+    aromatic = np.asarray(atomic_number)
+    sp = np.asarray(sp)
+    sp2 = np.asarray(sp2)
+    sp3 = np.asarray(sp3)
+    num_hs = np.asarray(num_hs)
+
+    row, col, edge_type = [], [], []
+    for bond in mol.GetBonds():
+        start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+        row += [start, end]
+        col += [end, start]
+        edge_type += 2 * [bonds[bond.GetBondType()]]
+    if len(edge_type) > 2*max_edges:
+        return None
+    edge_index = torch.tensor([row, col], dtype=torch.long)
+    edge_type = torch.tensor(edge_type, dtype=torch.long)
+    edge_attr = F.one_hot(edge_type,
+                          num_classes=len(bonds)).to(torch.float)
+
+    perm = (edge_index[0] * N + edge_index[1]).argsort()
+    edge_index = edge_index[:, perm]
+    edge_type = edge_type[perm]
+    edge_attr = edge_attr[perm]
+
+    row, col = edge_index
+    hs = (z == 1).to(torch.float)
+    num_hs = scatter(hs[row], col, dim_size=N).tolist()
+
+    x = torch.tensor([atomic_number, aromatic, sp, sp2, sp3, num_hs],
+                      dtype=torch.float).t().contiguous()
+
+    # only keep largest connected component
+    edges_coo = edge_index.detach().cpu().numpy().T
+    g = nx.Graph()
+    g.add_nodes_from(np.arange(len(z)))
+    g.add_edges_from(edges_coo.tolist())
+
+    ccs = list(nx.connected_components(g))
+    largest_cc = ccs[np.argmax([len(cc) for cc in ccs])]
+    node_ids = np.asarray(list(largest_cc))
+
+    x = x[node_ids]
+    z = z[node_ids]
+    edges_cc = []
+    edge_feats = []
+    old2new = {old:new for new, old in enumerate(node_ids)}
+    for idx2, (u, v) in enumerate(edges_coo):
+        if u in node_ids and v in node_ids:
+            edges_cc += [[old2new[u], old2new[v]]]
+            edge_feats += [edge_attr[idx2].numpy().tolist()]
+            
+    edge_index = torch.tensor(edges_cc, dtype=torch.long)
+    edge_attr = torch.tensor(edge_feats, dtype=torch.float)
+    
+    # add loops for unconnected molecules / single atoms
+    if len(edge_feats) == 0:
+        for vidx, atomic_number in enumerate(z.numpy()):
+            edges_cc += [[vidx, vidx]]
+            edge_feats += [0] 
+        edge_type = torch.tensor(edge_feats, dtype=torch.long)
+        edge_attr = F.one_hot(edge_type,
+                              num_classes=len(bonds)).to(torch.float)
+        
+        edge_index = torch.tensor(edges_cc, dtype=torch.long)
+    
+    
+    
+    d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
+                    edge_attr=edge_attr)
+    return d
+    
+    
+
 def collate_minc_rndc_y(dlist):
     z_batch = []
     y_batch = []
@@ -109,101 +208,7 @@ class Deepchem2TorchGeometric(Dataset):
     def prepare(self):
         for idx in range(len(self.smiles)):
             smiles = self.smiles[idx]
-            mol = Chem.MolFromSmiles(smiles)
-            if self.useHs:
-                mol = Chem.rdmolops.AddHs(mol)        
-            N = mol.GetNumAtoms()
-
-            atomic_number = []
-            aromatic = []
-            sp = []
-            sp2 = []
-            sp3 = []
-            num_hs = []
-            for atom in mol.GetAtoms():
-                atomic_number.append(atom.GetAtomicNum())
-                aromatic.append(1 if atom.GetIsAromatic() else 0)
-                hybridization = atom.GetHybridization()
-                sp.append(1 if hybridization == HybridizationType.SP else 0)
-                sp2.append(1 if hybridization == HybridizationType.SP2 else 0)
-                sp3.append(1 if hybridization == HybridizationType.SP3 else 0)
-
-            if len(atomic_number) > self.max_nodes:
-                continue
-            z = torch.tensor(atomic_number, dtype=torch.long)
-            
-
-            atomic_number = np.asarray(atomic_number)
-            aromatic = np.asarray(atomic_number)
-            sp = np.asarray(sp)
-            sp2 = np.asarray(sp2)
-            sp3 = np.asarray(sp3)
-            num_hs = np.asarray(num_hs)
-
-            row, col, edge_type = [], [], []
-            for bond in mol.GetBonds():
-                start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
-                row += [start, end]
-                col += [end, start]
-                edge_type += 2 * [bonds[bond.GetBondType()]]
-            if len(edge_type) > 2*self.max_edges:
-                continue
-            edge_index = torch.tensor([row, col], dtype=torch.long)
-            edge_type = torch.tensor(edge_type, dtype=torch.long)
-            edge_attr = F.one_hot(edge_type,
-                                  num_classes=len(bonds)).to(torch.float)
-
-            perm = (edge_index[0] * N + edge_index[1]).argsort()
-            edge_index = edge_index[:, perm]
-            edge_type = edge_type[perm]
-            edge_attr = edge_attr[perm]
-
-            row, col = edge_index
-            hs = (z == 1).to(torch.float)
-            num_hs = scatter(hs[row], col, dim_size=N).tolist()
-
-            x = torch.tensor([atomic_number, aromatic, sp, sp2, sp3, num_hs],
-                              dtype=torch.float).t().contiguous()
-
-            # only keep largest connected component
-            edges_coo = edge_index.detach().cpu().numpy().T
-            g = nx.Graph()
-            g.add_nodes_from(np.arange(len(z)))
-            g.add_edges_from(edges_coo.tolist())
-
-            ccs = list(nx.connected_components(g))
-            largest_cc = ccs[np.argmax([len(cc) for cc in ccs])]
-            node_ids = np.asarray(list(largest_cc))
-
-            x = x[node_ids]
-            z = z[node_ids]
-            edges_cc = []
-            edge_feats = []
-            old2new = {old:new for new, old in enumerate(node_ids)}
-            for idx2, (u, v) in enumerate(edges_coo):
-                if u in node_ids and v in node_ids:
-                    edges_cc += [[old2new[u], old2new[v]]]
-                    edge_feats += [edge_attr[idx2].numpy().tolist()]
-                    
-            edge_index = torch.tensor(edges_cc, dtype=torch.long)
-            edge_attr = torch.tensor(edge_feats, dtype=torch.float)
-            
-            # add loops for unconnected molecules / single atoms
-            if len(edge_feats) == 0:
-                for vidx, atomic_number in enumerate(z.numpy()):
-                    edges_cc += [[vidx, vidx]]
-                    edge_feats += [0] 
-                edge_type = torch.tensor(edge_feats, dtype=torch.long)
-                edge_attr = F.one_hot(edge_type,
-                                      num_classes=len(bonds)).to(torch.float)
-                
-                edge_index = torch.tensor(edges_cc, dtype=torch.long)
-            
-            
-            
-            d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
-                            edge_attr=edge_attr, y=torch.tensor(self.labels[idx]))
-            
+            d = smiles2graph(smiles, self.useHs, self.max_nodes, self.max_edges)
             
             if self.onlyRandom:
                 min_code, min_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
@@ -214,8 +219,8 @@ class Deepchem2TorchGeometric(Dataset):
                                                                          d.z.numpy().tolist(), 
                                                                          np.argmax(d.edge_attr.numpy(), axis=1))
                 
-            self.data += [Data(x=x, z=z, pos=None, edge_index=edge_index.T,
-                            edge_attr=edge_attr, y=torch.tensor(self.labels[idx]),
+            self.data += [Data(x=d.x, z=d.z, pos=None, edge_index=d.edge_index,
+                            edge_attr=d.edge_attr, y=torch.tensor(self.labels[idx]),
                             min_dfs_code=torch.tensor(min_code), min_dfs_index=torch.tensor(min_index))]
             
     
