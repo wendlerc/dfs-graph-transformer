@@ -1,5 +1,0 @@
-INFO - compute minimum dfs codes - Running command 'main'
-INFO - compute minimum dfs codes - Started run with ID "64"
-0it [00:00, ?it/s]0it [00:00, ?it/s]
-INFO - compute minimum dfs codes - Result: {}
-INFO - compute minimum dfs codes - Completed after 0:00:00
