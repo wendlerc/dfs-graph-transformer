@@ -188,6 +188,20 @@ def collate_minc_rndc_y(dlist):
         y_batch += [d.y]
     return rnd_code_batch, min_code_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
 
+
+def collate_smiles_y(dlist):
+    z_batch = []
+    y_batch = []
+    edge_attr_batch = []
+    smiles_batch = []
+    for d in dlist:
+        smiles_batch += [d.smiles]
+        z_batch += [nn.functional.one_hot(d.z, 118).numpy()]#118 elements in periodic table
+        edge_attr_batch += [d.edge_attr.numpy()]
+        y_batch += [d.y]
+    return smiles_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
+
+
 class Deepchem2TorchGeometric(Dataset):
     def __init__(self, deepchem_smiles_dataset, taskid=0,
                  max_edges=np.inf, max_nodes=np.inf, onlyRandom=False,
@@ -221,7 +235,8 @@ class Deepchem2TorchGeometric(Dataset):
                 
             self.data += [Data(x=d.x, z=d.z, pos=None, edge_index=d.edge_index,
                             edge_attr=d.edge_attr, y=torch.tensor(self.labels[idx]),
-                            min_dfs_code=torch.tensor(min_code), min_dfs_index=torch.tensor(min_index))]
+                            min_dfs_code=torch.tensor(min_code), min_dfs_index=torch.tensor(min_index), 
+                            smiles=smiles)]
             
     
 
