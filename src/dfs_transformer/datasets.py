@@ -172,8 +172,8 @@ def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=100, max_edges=2
         loop_np = np.zeros(len(bonds))
         loop = torch.tensor(loop_np, dtype=torch.float)
         for vidx, atomic_number in enumerate(z.numpy()):
-            edges_cc += [[vidx, vidx]]
-            edge_feats += [loop] 
+            edges_cc += [[vidx, vidx], [vidx, vidx]]
+            edge_feats += [loop, loop] 
             
     edge_index = torch.tensor(edges_cc, dtype=torch.long)
     edge_attr = torch.tensor(edge_feats, dtype=torch.float)
