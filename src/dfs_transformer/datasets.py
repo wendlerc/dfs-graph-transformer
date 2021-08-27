@@ -70,9 +70,28 @@ types = {'C': 0,
 bonds =  {rdkit.Chem.rdchem.BondType.SINGLE: 0,
  rdkit.Chem.rdchem.BondType.DOUBLE: 1,
  rdkit.Chem.rdchem.BondType.AROMATIC: 2,
- rdkit.Chem.rdchem.BondType.TRIPLE: 3}
+ rdkit.Chem.rdchem.BondType.TRIPLE: 3,
+ "loop": 4}
 
-def smiles2graph(smiles, useHs=False, max_nodes=100, max_edges=200):
+def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=100, max_edges=200):
+    """
+    Parameters
+    ----------
+    smiles : string
+        smiles representation of molecule.
+    useHs : bool
+        whether to model H atoms as nodes. The default is False.
+    addLoops : bool
+        whether to add loops to the atoms. The default is False.
+    max_nodes : int, optional
+        the maximum number of atoms. The default is 100.
+    max_edges : int, optional
+        the maximum number of edges. The default is 200.
+
+    Returns
+    -------
+    d :  torch geometric data object containing the graph or None in case of failure
+    """
     mol = Chem.MolFromSmiles(smiles)
     if useHs:
         mol = Chem.rdmolops.AddHs(mol)        
@@ -148,19 +167,25 @@ def smiles2graph(smiles, useHs=False, max_nodes=100, max_edges=200):
         if u in node_ids and v in node_ids:
             edges_cc += [[old2new[u], old2new[v]]]
             edge_feats += [edge_attr[idx2].numpy().tolist()]
+    
+    if addLoops:
+        loop_np = np.zeros(len(bonds))
+        loop = torch.tensor(loop_np, dtype=torch.float)
+        for vidx, atomic_number in enumerate(z.numpy()):
+            edges_cc += [[vidx, vidx]]
+            edge_feats += [loop] 
             
     edge_index = torch.tensor(edges_cc, dtype=torch.long)
     edge_attr = torch.tensor(edge_feats, dtype=torch.float)
     
-    # add loops for unconnected molecules / single atoms
+    # add loops for molecules that consist of a single atom
     if len(edge_feats) == 0:
         for vidx, atomic_number in enumerate(z.numpy()):
             edges_cc += [[vidx, vidx]]
-            edge_feats += [0] 
+            edge_feats += [4] 
         edge_type = torch.tensor(edge_feats, dtype=torch.long)
         edge_attr = F.one_hot(edge_type,
                               num_classes=len(bonds)).to(torch.float)
-        
         edge_index = torch.tensor(edges_cc, dtype=torch.long)
     
     
