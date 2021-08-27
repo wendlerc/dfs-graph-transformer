@@ -181,8 +181,8 @@ def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=100, max_edges=2
     # add loops for molecules that consist of a single atom
     if len(edge_feats) == 0:
         for vidx, atomic_number in enumerate(z.numpy()):
-            edges_cc += [[vidx, vidx]]
-            edge_feats += [4] 
+            edges_cc += [[vidx, vidx], [vidx, vidx]]
+            edge_feats += [4, 4] 
         edge_type = torch.tensor(edge_feats, dtype=torch.long)
         edge_attr = F.one_hot(edge_type,
                               num_classes=len(bonds)).to(torch.float)
