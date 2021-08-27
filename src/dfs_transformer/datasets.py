@@ -188,6 +188,8 @@ def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=100, max_edges=2
                               num_classes=len(bonds)).to(torch.float)
         edge_index = torch.tensor(edges_cc, dtype=torch.long)
     
+    if not addLoops:
+        edge_attr = edge_attr[:, :4]
     
     
     d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
@@ -230,12 +232,13 @@ def collate_smiles_y(dlist):
 class Deepchem2TorchGeometric(Dataset):
     def __init__(self, deepchem_smiles_dataset, taskid=0,
                  max_edges=np.inf, max_nodes=np.inf, onlyRandom=False,
-                 useHs=False, precompute_min_dfs=True):
+                 useHs=False, addLoops=False, precompute_min_dfs=True):
         self.deepchem = deepchem_smiles_dataset
         self.smiles = deepchem_smiles_dataset.X
         self.labels = deepchem_smiles_dataset.y[:, taskid][:, np.newaxis]
         self.w = deepchem_smiles_dataset.w
         self.useHs = useHs
+        self.addLoops = addLoops
         self.precompute_min_dfs=precompute_min_dfs
         self.data = []
         self.max_edges = max_edges
@@ -247,7 +250,7 @@ class Deepchem2TorchGeometric(Dataset):
     def prepare(self):
         for idx in range(len(self.smiles)):
             smiles = self.smiles[idx]
-            d = smiles2graph(smiles, self.useHs, self.max_nodes, self.max_edges)
+            d = smiles2graph(smiles, self.useHs, self.addLoops, self.max_nodes, self.max_edges)
             
             if self.onlyRandom:
                 min_code, min_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
