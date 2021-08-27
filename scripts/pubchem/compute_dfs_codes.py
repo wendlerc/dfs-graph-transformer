@@ -34,9 +34,9 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
     with open(smiles_file, "r") as f:
         for idx, smiles in tqdm.tqdm(enumerate(f.readlines())):
             if idx % total == nr:
-                d = smiles2graph(smiles, use_Hs, max_nodes, max_edges)
                 try:
                     time1 = time.time()
+                    d = smiles2graph(smiles, use_Hs, max_nodes, max_edges)
                     code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                                  d.z.numpy().tolist(), 
                                                                                  np.argmax(d.edge_attr.numpy(), axis=1),
@@ -46,7 +46,7 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
                     dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
                 except:
                     logging.warning('%s failed'%smiles)
-                    exp.log_scalar('failed', smiles)
+                    exp.log_scalar('%s failed with', sys.exc_info()[0])
                     continue
         
         
