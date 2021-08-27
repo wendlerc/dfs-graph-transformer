@@ -25,10 +25,11 @@ def cfg(_log):
     time_limit = 60
     log_level = logging.INFO
     use_Hs = False
+    add_loops = False
     smiles_file = "/mnt/ssd/datasets/pubchem_10m.txt/pubchem-10m.txt"
 
 @exp.automain
-def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, _run, _log):
+def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     with open(smiles_file, "r") as f:
@@ -36,7 +37,7 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
             if idx % total == nr:
                 try:
                     time1 = time.time()
-                    d = smiles2graph(smiles, use_Hs, max_nodes, max_edges)
+                    d = smiles2graph(smiles, use_Hs, add_loops, max_nodes, max_edges)
                     code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                                  d.z.numpy().tolist(), 
                                                                                  np.argmax(d.edge_attr.numpy(), axis=1),
