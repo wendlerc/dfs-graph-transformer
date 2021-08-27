@@ -47,9 +47,8 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
                     dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
                 except:
                     logging.warning('%s failed'%smiles)
-                    exp.log_scalar('%s failed with', sys.exc_info()[0])
+                    exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
                     continue
-        
         
     with NamedTemporaryFile(suffix='.json', delete=True) as f:
         with open(f.name, 'w') as ff:
