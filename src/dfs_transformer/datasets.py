@@ -74,7 +74,7 @@ bonds =  {rdkit.Chem.rdchem.BondType.SINGLE: 0,
  "loop": 4}
 
 def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True, 
-                 max_nodes=np.inf, max_edges=np.inf, skipCliqueCheck=True):
+                 max_nodes=np.inf, max_edges=np.inf, skipCliqueCheck=False):
     """
     Parameters
     ----------
@@ -177,6 +177,11 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
             if u in node_ids and v in node_ids:
                 edges_cc += [[old2new[u], old2new[v]]]
                 edge_feats += [edge_attr[idx2].numpy().tolist()]
+        
+        edge_index = torch.tensor(edges_cc, dtype=torch.long)
+        edge_attr = torch.tensor(edge_feats, dtype=torch.float)
+
+        
     
     if not addLoops and not dontTrimEdges:
         edge_attr = edge_attr[:, :4]
