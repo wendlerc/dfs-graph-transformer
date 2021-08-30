@@ -118,7 +118,7 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
     
 
     atomic_number = np.asarray(atomic_number)
-    aromatic = np.asarray(atomic_number)
+    aromatic = np.asarray(aromatic)
     sp = np.asarray(sp)
     sp2 = np.asarray(sp2)
     sp3 = np.asarray(sp3)
@@ -132,7 +132,7 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
         edge_type += 2 * [bonds[bond.GetBondType()]]
         
     if addLoops or len(edge_type) == 0:
-        for vidx, atomic_number in enumerate(z.numpy()):
+        for vidx, anr in enumerate(z.numpy()):
             row += [vidx, vidx]
             col += [vidx, vidx]
             edge_type += 2*[bonds["loop"]]
