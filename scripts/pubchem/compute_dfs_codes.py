@@ -25,18 +25,19 @@ def cfg(_log):
     time_limit = 60
     log_level = logging.INFO
     use_Hs = False
+    add_loops = False
     smiles_file = "/mnt/ssd/datasets/pubchem_10m.txt/pubchem-10m.txt"
 
 @exp.automain
-def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, _run, _log):
+def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     with open(smiles_file, "r") as f:
         for idx, smiles in tqdm.tqdm(enumerate(f.readlines())):
             if idx % total == nr:
-                d = smiles2graph(smiles, use_Hs, max_nodes, max_edges)
                 try:
                     time1 = time.time()
+                    d = smiles2graph(smiles, use_Hs, add_loops, max_nodes, max_edges)
                     code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                                  d.z.numpy().tolist(), 
                                                                                  np.argmax(d.edge_attr.numpy(), axis=1),
@@ -46,9 +47,8 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
                     dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
                 except:
                     logging.warning('%s failed'%smiles)
-                    exp.log_scalar('failed', smiles)
+                    exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
                     continue
-        
         
     with NamedTemporaryFile(suffix='.json', delete=True) as f:
         with open(f.name, 'w') as ff:
