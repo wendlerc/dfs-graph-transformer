@@ -73,7 +73,8 @@ bonds =  {rdkit.Chem.rdchem.BondType.SINGLE: 0,
  rdkit.Chem.rdchem.BondType.TRIPLE: 3,
  "loop": 4}
 
-def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True, max_nodes=np.inf, max_edges=np.inf):
+def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True, 
+                 max_nodes=np.inf, max_edges=np.inf, skipCliqueCheck=True):
     """
     Parameters
     ----------
@@ -129,8 +130,16 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True, max_no
         row += [start, end]
         col += [end, start]
         edge_type += 2 * [bonds[bond.GetBondType()]]
+        
+    if addLoops or len(edge_type) == 0:
+        for vidx, atomic_number in enumerate(z.numpy()):
+            row += [vidx, vidx]
+            col += [vidx, vidx]
+            edge_type += 2*[bonds["loop"]]
+            
     if len(edge_type) > 2*max_edges:
         return None
+    
     edge_index = torch.tensor([row, col], dtype=torch.long)
     edge_type = torch.tensor(edge_type, dtype=torch.long)
     edge_attr = F.one_hot(edge_type,
@@ -149,44 +158,25 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True, max_no
                       dtype=torch.float).t().contiguous()
 
     # only keep largest connected component
-    edges_coo = edge_index.detach().cpu().numpy().T
-    g = nx.Graph()
-    g.add_nodes_from(np.arange(len(z)))
-    g.add_edges_from(edges_coo.tolist())
-
-    ccs = list(nx.connected_components(g))
-    largest_cc = ccs[np.argmax([len(cc) for cc in ccs])]
-    node_ids = np.asarray(list(largest_cc))
-
-    x = x[node_ids]
-    z = z[node_ids]
-    edges_cc = []
-    edge_feats = []
-    old2new = {old:new for new, old in enumerate(node_ids)}
-    for idx2, (u, v) in enumerate(edges_coo):
-        if u in node_ids and v in node_ids:
-            edges_cc += [[old2new[u], old2new[v]]]
-            edge_feats += [edge_attr[idx2].numpy().tolist()]
+    if not skipCliqueCheck:
+        edges_coo = edge_index.detach().cpu().numpy().T
+        g = nx.Graph()
+        g.add_nodes_from(np.arange(len(z)))
+        g.add_edges_from(edges_coo.tolist())
     
-    if addLoops:
-        loop_np = np.zeros(len(bonds))
-        loop = torch.tensor(loop_np, dtype=torch.float)
-        for vidx, atomic_number in enumerate(z.numpy()):
-            edges_cc += [[vidx, vidx], [vidx, vidx]]
-            edge_feats += [loop, loop] 
-            
-    edge_index = torch.tensor(edges_cc, dtype=torch.long)
-    edge_attr = torch.tensor(edge_feats, dtype=torch.float)
+        ccs = list(nx.connected_components(g))
+        largest_cc = ccs[np.argmax([len(cc) for cc in ccs])]
+        node_ids = np.asarray(list(largest_cc))
     
-    # add loops for molecules that consist of a single atom
-    if len(edge_feats) == 0:
-        for vidx, atomic_number in enumerate(z.numpy()):
-            edges_cc += [[vidx, vidx], [vidx, vidx]]
-            edge_feats += [4, 4] 
-        edge_type = torch.tensor(edge_feats, dtype=torch.long)
-        edge_attr = F.one_hot(edge_type,
-                              num_classes=len(bonds)).to(torch.float)
-        edge_index = torch.tensor(edges_cc, dtype=torch.long)
+        x = x[node_ids]
+        z = z[node_ids]
+        edges_cc = []
+        edge_feats = []
+        old2new = {old:new for new, old in enumerate(node_ids)}
+        for idx2, (u, v) in enumerate(edges_coo):
+            if u in node_ids and v in node_ids:
+                edges_cc += [[old2new[u], old2new[v]]]
+                edge_feats += [edge_attr[idx2].numpy().tolist()]
     
     if not addLoops and not dontTrimEdges:
         edge_attr = edge_attr[:, :4]
@@ -232,7 +222,7 @@ def collate_smiles_y(dlist):
 class Deepchem2TorchGeometric(Dataset):
     def __init__(self, deepchem_smiles_dataset, taskid=0,
                  max_edges=np.inf, max_nodes=np.inf, onlyRandom=False,
-                 useHs=False, addLoops=False, precompute_min_dfs=True):
+                 useHs=False, addLoops=False, trimEdges=True, precompute_min_dfs=True):
         self.deepchem = deepchem_smiles_dataset
         self.smiles = deepchem_smiles_dataset.X
         self.labels = deepchem_smiles_dataset.y[:, taskid][:, np.newaxis]
@@ -244,13 +234,14 @@ class Deepchem2TorchGeometric(Dataset):
         self.max_edges = max_edges
         self.max_nodes = max_nodes
         self.onlyRandom = onlyRandom
+        self.trimEdges = trimEdges
         self.prepare()
   
     
     def prepare(self):
         for idx in range(len(self.smiles)):
             smiles = self.smiles[idx]
-            d = smiles2graph(smiles, self.useHs, self.addLoops, self.max_nodes, self.max_edges)
+            d = smiles2graph(smiles, self.useHs, self.addLoops, not self.trimEdges, self.max_nodes, self.max_edges)
             
             if self.onlyRandom:
                 min_code, min_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
