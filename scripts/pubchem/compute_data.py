@@ -8,7 +8,7 @@ import glob
 import dfs_code
 from torch_geometric.data import InMemoryDataset, Data
 import sys
-sys.path = ['../../src'] + sys.path
+sys.path = ['./src'] + sys.path
 from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, smiles2graph
 import logging
 from sacred import Experiment
@@ -32,7 +32,7 @@ def cfg(_log):
 def main(path, n_splits, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, _run, _log):
     logging.basicConfig(level=log_level)
     for i in range(n_splits):
-        if n_splits % total == nr:
+        if i % total == nr:
             dname = glob.glob(path+"/%d/min_dfs_codes_split*.json"%(i+1))[0]
             didx = int(dname.split("split")[-1][:-5])
             with open(path+"/%d/min_dfs_codes_split%d.json"%(i+1, didx), 'r') as f:
