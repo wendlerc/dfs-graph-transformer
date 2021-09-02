@@ -247,6 +247,8 @@ class Deepchem2TorchGeometric(Dataset):
         for idx in range(len(self.smiles)):
             smiles = self.smiles[idx]
             d = smiles2graph(smiles, self.useHs, self.addLoops, not self.trimEdges, self.max_nodes, self.max_edges)
+            if d is None:
+                continue
             
             if self.onlyRandom:
                 min_code, min_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 

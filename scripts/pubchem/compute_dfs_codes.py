@@ -11,7 +11,7 @@ from tempfile import NamedTemporaryFile
 from torch_geometric.data import InMemoryDataset
 import torch
 import sys
-sys.path = ['/local/home/chris/repos/graph-transformer/src'] + sys.path
+sys.path = ['./src'] + sys.path
 from dfs_transformer import smiles2graph
 
 exp = Experiment('compute minimum dfs codes')
@@ -25,7 +25,7 @@ def cfg(_log):
     time_limit = 60
     log_level = logging.INFO
     use_Hs = False
-    smiles_file = "/local/home/chris/pubchem-10m.txt"
+    smiles_file = "/mnt/ssd/datasets/pubchem_10m.txt/pubchem-10m.txt"
     add_loops = False
 
 @exp.automain
