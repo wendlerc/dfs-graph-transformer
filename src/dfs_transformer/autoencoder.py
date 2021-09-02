@@ -14,7 +14,7 @@ from .transformers import PositionalEncoding, DFSCodeEncoder
 
 
 class DFSCodeAutoencoder(nn.Module):
-    def __init__(self, n_atoms, n_bonds, emb_dim, nhead, nlayers, n_memory_blocks=2, 
+    def __init__(self, n_atoms, n_bonds, emb_dim, nhead, nlayers, n_memory_blocks=6, 
                  dim_feedforward=2048, max_nodes=400, max_edges=400, 
                  atom_encoder=None, bond_encoder=None, dropout=0.1):
         super().__init__()
@@ -44,7 +44,8 @@ class DFSCodeAutoencoder(nn.Module):
     def forward(self, C, N, E):
         self_attn, _, src_key_padding_mask = self.encoder(C, N, E) # seq x batch x feat
         query = torch.tile(self.memory_query, [1, self_attn.shape[1], 1]) # n_memory_blocks x batch x feat
-        attn_output, attn_output_weights = self.bottleneck(query, self_attn, self_attn) # n_memory_blocks x batch x feat
+        attn_output, attn_output_weights = self.bottleneck(query, self_attn, self_attn,
+                                                           key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
         memory = attn_output
         tgt = torch.tile(self.output_query[:self_attn.shape[0]].unsqueeze(1), [1, self_attn.shape[1], 1]) # seq x batch x feat
         cross_attn = self.decoder(tgt, memory, tgt_key_padding_mask=src_key_padding_mask) # seq x batch x feat
