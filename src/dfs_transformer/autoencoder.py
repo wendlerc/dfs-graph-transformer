@@ -33,7 +33,6 @@ class DFSCodeAutoencoder(nn.Module):
         self.fc_atom1 = nn.Linear(self.ninp, n_atoms)
         self.fc_atom2 = nn.Linear(self.ninp, n_atoms)
         self.fc_bond = nn.Linear(self.ninp, n_bonds)
-        self.fc_eos = nn.Linear(self.ninp, 1)
         
         self.memory_query = nn.Parameter(torch.empty(n_memory_blocks, 1, self.ninp), requires_grad=True)
         pos_emb = PositionalEncoding(self.ninp, dropout=0, max_len=max_edges)(torch.zeros((max_edges, 1, self.ninp)))
@@ -45,8 +44,9 @@ class DFSCodeAutoencoder(nn.Module):
     def forward(self, C, N, E):
         self_attn, _, src_key_padding_mask = self.encoder(C, N, E) # seq x batch x feat
         query = torch.tile(self.memory_query, [1, self_attn.shape[1], 1]) # n_memory_blocks x batch x feat
-        memory = self.bottleneck(query, self_attn, self_attn) # n_memory_blocks x batch x feat
-        tgt = torch.tile(self.output_query[:self_attn.shape[0]], [1, self_attn.shape[1], 1]) # seq x batch x feat
+        attn_output, attn_output_weights = self.bottleneck(query, self_attn, self_attn) # n_memory_blocks x batch x feat
+        memory = attn_output
+        tgt = torch.tile(self.output_query[:self_attn.shape[0]].unsqueeze(1), [1, self_attn.shape[1], 1]) # seq x batch x feat
         cross_attn = self.decoder(tgt, memory, tgt_key_padding_mask=src_key_padding_mask) # seq x batch x feat
         batch = cross_attn.permute(1,0,2) # batch x seq x feat
         dfs_idx1_logits = self.fc_dfs_idx1(batch).permute(1,0,2) #seq x batch x feat
@@ -54,8 +54,7 @@ class DFSCodeAutoencoder(nn.Module):
         atom1_logits = self.fc_atom1(batch).permute(1,0,2)
         atom2_logits = self.fc_atom2(batch).permute(1,0,2)
         bond_logits = self.fc_bond(batch).permute(1,0,2)
-        eos_logits = self.fc_eos(batch).permute(1,0,2)
-        return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, eos_logits
+        return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
     
     def encode(self, C, N, E):
@@ -78,6 +77,6 @@ class DFSCodeAutoencoder(nn.Module):
         
         self_attn = self.encoder(C, N, E) # seq x batch x feat
         query = torch.tile(self.memory_query, [1, self_attn.shape[1], 1]) # n_memory_blocks x batch x feat
-        memory = self.bottleneck(query, self_attn, self_attn) # n_memory_blocks x batch x feat
+        memory, _ = self.bottleneck(query, self_attn, self_attn) # n_memory_blocks x batch x feat
         return memory
     
