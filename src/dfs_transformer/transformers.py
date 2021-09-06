@@ -102,7 +102,7 @@ class DFSCodeEncoder(nn.Module):
                                  src_key_padding_mask=src_key_padding_mask)
         
         if eos_idx is not None and class_token is not None:
-            eos_idx += 1
+            eos_idx += class_token.shape[0]
             
         return self_attn, eos_idx, src_key_padding_mask
 
