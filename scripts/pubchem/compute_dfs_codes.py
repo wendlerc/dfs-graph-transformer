@@ -53,6 +53,8 @@ def main(smiles_file, nr, total, max_nodes, max_edges, dont_trim, time_limit, lo
                     data['z'] = d.z.detach().cpu().numpy().tolist()
                     data['edge_attr'] = d.edge_attr.detach().cpu().numpy().tolist()
                     data['edge_index'] = d.edge_index.detach().cpu().numpy().tolist()
+                    data['atom_features'] = d.atom_features.detach().cpu().numpy().tolist()
+                    data['bond_features'] = d.bond_features.detach().cpu().numpy().tolist()
                     d_dict[smiles] = data
                 except:
                     logging.warning('%s failed'%smiles)
