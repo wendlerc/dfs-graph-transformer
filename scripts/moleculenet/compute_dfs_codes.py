@@ -14,6 +14,7 @@ import sys
 sys.path = ['./src'] + sys.path
 from dfs_transformer import smiles2graph
 import deepchem as dc
+import traceback
 
 exp = Experiment('compute minimum dfs codes')
 
@@ -27,10 +28,11 @@ def cfg(_log):
     log_level = logging.INFO
     use_Hs = False
     add_loops = False
+    dont_trim = True
     dataset = "hiv"
 
 @exp.automain
-def main(dataset, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, _run, _log):
+def main(dataset, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, dont_trim, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     d_dict = {}
@@ -46,7 +48,7 @@ def main(dataset, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs
     for idx, smiles in tqdm.tqdm(enumerate(datasets[0].X)):
         try:
             time1 = time.time()
-            d = smiles2graph(smiles, use_Hs, add_loops, max_nodes, max_edges)
+            d = smiles2graph(smiles, use_Hs, add_loops, dont_trim, max_nodes, max_edges)
             code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                          d.z.numpy().tolist(), 
                                                                          np.argmax(d.edge_attr.numpy(), axis=1),
@@ -59,10 +61,14 @@ def main(dataset, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs
             data['z'] = d.z.detach().cpu().numpy().tolist()
             data['edge_attr'] = d.edge_attr.detach().cpu().numpy().tolist()
             data['edge_index'] = d.edge_index.detach().cpu().numpy().tolist()
+            data['atom_features'] = d.atom_features.detach().cpu().numpy().tolist()
+            data['bond_features'] = d.bond_features.detach().cpu().numpy().tolist()
             d_dict[smiles] = data
         except:
             logging.warning('%s failed'%smiles)
             exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
+            logging.warning(sys.exc_info()[1])
+            traceback.print_tb(sys.exc_info()[2])
             continue
         
     with NamedTemporaryFile(suffix='.json', delete=True) as f:
