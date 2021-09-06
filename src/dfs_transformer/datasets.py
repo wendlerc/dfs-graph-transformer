@@ -24,6 +24,8 @@ from rdkit.Chem.rdchem import BondType as BT
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 import networkx as nx
+from chemprop.features.featurization import atom_features, bond_features
+
 
 
 types = {'C': 0,
@@ -73,6 +75,7 @@ bonds =  {rdkit.Chem.rdchem.BondType.SINGLE: 0,
  rdkit.Chem.rdchem.BondType.TRIPLE: 3,
  "loop": 4}
 
+
 def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True, 
                  max_nodes=np.inf, max_edges=np.inf, skipCliqueCheck=False):
     """
@@ -104,6 +107,7 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
     sp2 = []
     sp3 = []
     num_hs = []
+    atom_chemprop = []
     for atom in mol.GetAtoms():
         atomic_number.append(atom.GetAtomicNum())
         aromatic.append(1 if atom.GetIsAromatic() else 0)
@@ -111,6 +115,7 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
         sp.append(1 if hybridization == HybridizationType.SP else 0)
         sp2.append(1 if hybridization == HybridizationType.SP2 else 0)
         sp3.append(1 if hybridization == HybridizationType.SP3 else 0)
+        atom_chemprop.append(atom_features(atom))
 
     if len(atomic_number) > max_nodes:
         return None
@@ -123,19 +128,23 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
     sp2 = np.asarray(sp2)
     sp3 = np.asarray(sp3)
     num_hs = np.asarray(num_hs)
+    atom_chemprop = torch.tensor(atom_chemprop, dtype=torch.float)
 
     row, col, edge_type = [], [], []
+    bond_chemprop = []
     for bond in mol.GetBonds():
         start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
         row += [start, end]
         col += [end, start]
         edge_type += 2 * [bonds[bond.GetBondType()]]
+        bond_chemprop += 2*[bond_features(bond)]
         
     if addLoops or len(edge_type) == 0:
         for vidx, anr in enumerate(z.numpy()):
             row += [vidx, vidx]
             col += [vidx, vidx]
             edge_type += 2*[bonds["loop"]]
+            bond_chemprop += 2*[bond_features(None)]
             
     if len(edge_type) > 2*max_edges:
         return None
@@ -144,12 +153,13 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
     edge_type = torch.tensor(edge_type, dtype=torch.long)
     edge_attr = F.one_hot(edge_type,
                           num_classes=len(bonds)).to(torch.float)
+    bond_chemprop = torch.tensor(bond_chemprop, dtype=torch.float)
 
     perm = (edge_index[0] * N + edge_index[1]).argsort()
     edge_index = edge_index[:, perm]
     edge_type = edge_type[perm]
     edge_attr = edge_attr[perm]
-
+    bond_chemprop = bond_chemprop[perm]
     row, col = edge_index
     hs = (z == 1).to(torch.float)
     num_hs = scatter(hs[row], col, dim_size=N).tolist()
@@ -170,17 +180,20 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
     
         x = x[node_ids]
         z = z[node_ids]
+        atom_chemprop = atom_chemprop[node_ids]
         edges_cc = []
         edge_feats = []
+        bond_chemprop_new = []
         old2new = {old:new for new, old in enumerate(node_ids)}
         for idx2, (u, v) in enumerate(edges_coo):
             if u in node_ids and v in node_ids:
                 edges_cc += [[old2new[u], old2new[v]]]
                 edge_feats += [edge_attr[idx2].numpy().tolist()]
+                bond_chemprop_new += [bond_chemprop[idx2].numpy().tolist()]
         
         edge_index = torch.tensor(edges_cc, dtype=torch.long)
         edge_attr = torch.tensor(edge_feats, dtype=torch.float)
-
+        bond_chemprop = torch.tensor(bond_chemprop_new, dtype=torch.float)
         
     
     if not addLoops and not dontTrimEdges:
@@ -188,7 +201,7 @@ def smiles2graph(smiles, useHs=False, addLoops=False, dontTrimEdges=True,
     
     
     d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
-                    edge_attr=edge_attr)
+                    edge_attr=edge_attr, atom_features=atom_chemprop, bond_features=bond_chemprop)
     return d
     
     

@@ -127,5 +127,6 @@ class DFSCodeSeq2SeqDecoder(nn.Module):
         zeros = torch.zeros((tgt.shape[1], self.n_class_tokens), dtype=torch.bool, device=tgt.device)
         tgt_key_padding_mask = torch.cat((zeros, src_key_padding_mask), dim=1) # batch x (ncls + seq) 
         cross_attn = self.decoder(tgt, memory, tgt_key_padding_mask=tgt_key_padding_mask) # (ncls + seq) x batch x feat
-        
-        return cross_attn[:self.n_class_tokens].permute(1, 0, 2).view(-1, self.ninp*self.n_class_tokens)
+        features = cross_attn[:self.n_class_tokens].permute(1, 0, 2)
+        features = torch.reshape(features, (-1, self.ninp*self.n_class_tokens))
+        return features
