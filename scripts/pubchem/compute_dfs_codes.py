@@ -32,6 +32,7 @@ def cfg(_log):
 def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
+    d_dict = {}
     with open(smiles_file, "r") as f:
         for idx, smiles in tqdm.tqdm(enumerate(f.readlines())):
             if idx % total == nr:
@@ -45,6 +46,12 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
                     time2 = time.time()
                     exp.log_scalar('time %s'%smiles, time2-time1)
                     dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
+                    data = {}
+                    data['x'] = d.x.detach().cpu().numpy().tolist()
+                    data['z'] = d.z.detach().cpu().numpy().tolist()
+                    data['edge_attr'] = d.edge_attr.detach().cpu().numpy().tolist()
+                    data['edge_index'] = d.edge_index.detach().cpu().numpy().tolist()
+                    d_dict[smiles] = data
                 except:
                     logging.warning('%s failed'%smiles)
                     exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
@@ -54,5 +61,10 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
         with open(f.name, 'w') as ff:
             json.dump(dfs_codes, ff)
         _run.add_artifact(f.name, 'min_dfs_codes_split%d.json'%(nr))
+    
+    with NamedTemporaryFile(suffix='.json', delete=True) as f:
+        with open(f.name, 'w') as ff:
+            json.dump(d_dict, ff)
+        _run.add_artifact(f.name, 'data_split%d.json'%nr)
         
 
