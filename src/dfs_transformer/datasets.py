@@ -224,6 +224,24 @@ def collate_minc_rndc_y(dlist):
     return rnd_code_batch, min_code_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
 
 
+def collate_minc_rndc_features_y(dlist):
+    node_batch = []
+    y_batch = []
+    edge_batch = []
+    rnd_code_batch = []
+    min_code_batch = []
+    for d in dlist:
+        rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                         d.z.numpy().tolist(), 
+                                                                         np.argmax(d.edge_attr.numpy(), axis=1))
+        node_batch += [d.node_features]
+        edge_batch += [d.edge_features]
+        rnd_code_batch += [torch.tensor(rnd_code)]
+        min_code_batch += [d.min_dfs_code]
+        y_batch += [d.y]
+    return rnd_code_batch, min_code_batch, node_batch, edge_batch, torch.cat(y_batch)
+
+
 def collate_smiles_y(dlist):
     z_batch = []
     y_batch = []
@@ -272,10 +290,17 @@ class Deepchem2TorchGeometric(Dataset):
                                                                          d.z.numpy().tolist(), 
                                                                          np.argmax(d.edge_attr.numpy(), axis=1))
                 
+            z = d.z
+            x = d.x
+            h = x[:, -1].clone().detach().long()
+            z_ind = nn.functional.one_hot(z, num_classes=118).float()
+            h_ind = nn.functional.one_hot(h, num_classes=5).float()
+            node_features = torch.cat((z_ind, x[:, 1:-1], h_ind), dim=1)
+                
             self.data += [Data(x=d.x, z=d.z, pos=None, edge_index=d.edge_index,
                             edge_attr=d.edge_attr, y=torch.tensor(self.labels[idx]),
                             min_dfs_code=torch.tensor(min_code), min_dfs_index=torch.tensor(min_index), 
-                            smiles=smiles)]
+                            smiles=smiles, node_features=node_features, edge_features=d.edge_attr)]
             
     
 

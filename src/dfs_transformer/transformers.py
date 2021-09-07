@@ -105,7 +105,7 @@ class DFSCodeEncoder(nn.Module):
             eos_idx += class_token.shape[0]
             
         return self_attn, eos_idx, src_key_padding_mask
-
+    
 
 class DFSCodeClassifier(nn.Module):
     def __init__(self, n_classes, emb_dim, nhead, nlayers, dim_feedforward=2048, max_nodes=400, max_edges=400, 
@@ -180,9 +180,9 @@ class DFSCodeSeq2SeqFC(nn.Module):
         cls token
         eos token
         """
-        self_attn, eos_idx = self.encoder(C, N, E, class_token=self.cls_token, eos=self.eos) # seq x batch x feat
+        self_attn, eos_idx, _ = self.encoder(C, N, E, class_token=self.cls_token, eos=self.eos) # seq x batch x feat
         idx = torch.arange(len(eos_idx), device=C[0].device)
-        return self_attn, self_attn[0], self_attn[eos_idx, idx]
+        return self_attn[0]
 
 
 
