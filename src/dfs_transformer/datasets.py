@@ -256,14 +256,11 @@ def collate_smiles_y(dlist):
 
 
 class Deepchem2TorchGeometric(Dataset):
-    def __init__(self, deepchem_smiles_dataset, taskid=0,
-                 max_edges=np.inf, max_nodes=np.inf, onlyRandom=False,
+    def __init__(self, smiles, labels, max_edges=np.inf, max_nodes=np.inf, onlyRandom=False,
                  useHs=False, addLoops=False, trimEdges=True, precompute_min_dfs=True,
                  features="chemprop"):
-        self.deepchem = deepchem_smiles_dataset
-        self.smiles = deepchem_smiles_dataset.X
-        self.labels = deepchem_smiles_dataset.y[:, taskid][:, np.newaxis]
-        self.w = deepchem_smiles_dataset.w
+        self.smiles = smiles
+        self.labels = labels[:, np.newaxis]
         self.useHs = useHs
         self.addLoops = addLoops
         self.precompute_min_dfs=precompute_min_dfs
