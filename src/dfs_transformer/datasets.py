@@ -258,7 +258,8 @@ def collate_smiles_y(dlist):
 class Deepchem2TorchGeometric(Dataset):
     def __init__(self, deepchem_smiles_dataset, taskid=0,
                  max_edges=np.inf, max_nodes=np.inf, onlyRandom=False,
-                 useHs=False, addLoops=False, trimEdges=True, precompute_min_dfs=True):
+                 useHs=False, addLoops=False, trimEdges=True, precompute_min_dfs=True,
+                 features="chemprop"):
         self.deepchem = deepchem_smiles_dataset
         self.smiles = deepchem_smiles_dataset.X
         self.labels = deepchem_smiles_dataset.y[:, taskid][:, np.newaxis]
@@ -271,6 +272,7 @@ class Deepchem2TorchGeometric(Dataset):
         self.max_nodes = max_nodes
         self.onlyRandom = onlyRandom
         self.trimEdges = trimEdges
+        self.features = features
         self.prepare()
   
     
@@ -292,15 +294,24 @@ class Deepchem2TorchGeometric(Dataset):
                 
             z = d.z
             x = d.x
-            h = x[:, -1].clone().detach().long()
-            z_ind = nn.functional.one_hot(z, num_classes=118).float()
-            h_ind = nn.functional.one_hot(h, num_classes=5).float()
-            node_features = torch.cat((z_ind, x[:, 1:-1], h_ind), dim=1)
+            if self.features == "old":
+                h = x[:, -1].clone().detach().long()
+                z_ind = nn.functional.one_hot(z, num_classes=118).float()
+                h_ind = nn.functional.one_hot(h, num_classes=5).float()
+                node_features = torch.cat((z_ind, x[:, 1:-1], h_ind), dim=1)
+                edge_features = d.edge_attr
+            elif self.features == "chemprop":
+                node_features = d.atom_features
+                edge_features = d.bond_features
+            else:#no features
+                node_features = nn.functional.one_hot(z, num_classes=118).float()
+                edge_features = d.edge_attr
+                
                 
             self.data += [Data(x=d.x, z=d.z, pos=None, edge_index=d.edge_index,
                             edge_attr=d.edge_attr, y=torch.tensor(self.labels[idx]),
                             min_dfs_code=torch.tensor(min_code), min_dfs_index=torch.tensor(min_index), 
-                            smiles=smiles, node_features=node_features, edge_features=d.edge_attr)]
+                            smiles=smiles, node_features=node_features, edge_features=edge_features)]
             
     
 

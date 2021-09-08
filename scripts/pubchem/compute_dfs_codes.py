@@ -26,17 +26,20 @@ def cfg(_log):
     log_level = logging.INFO
     use_Hs = False
     smiles_file = "/mnt/ssd/datasets/pubchem_10m.txt/pubchem-10m.txt"
-    smiles_file = "/local/home/chris/pubchem-10m.txt"
+    #smiles_file = "/local/home/chris/pubchem-10m.txt"
     add_loops = False
     dont_trim = True
+    max_lines = np.inf#100000
 
 @exp.automain
-def main(smiles_file, nr, total, max_nodes, max_edges, dont_trim, time_limit, log_level, use_Hs, add_loops, _run, _log):
+def main(smiles_file, nr, total, max_nodes, max_edges, dont_trim, time_limit, log_level, use_Hs, add_loops, max_lines, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     d_dict = {}
     with open(smiles_file, "r") as f:
         for idx, smiles in tqdm.tqdm(enumerate(f.readlines())):
+            if idx >= max_lines:
+                break
             if idx % total == nr:
                 try:
                     time1 = time.time()
@@ -44,7 +47,7 @@ def main(smiles_file, nr, total, max_nodes, max_edges, dont_trim, time_limit, lo
                     code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                                  d.z.numpy().tolist(), 
                                                                                  np.argmax(d.edge_attr.numpy(), axis=1),
-                                                                                 timeout=time_limit)          
+                                                                                 timeout=time_limit)    
                     time2 = time.time()
                     exp.log_scalar('time %s'%smiles, time2-time1)
                     dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
