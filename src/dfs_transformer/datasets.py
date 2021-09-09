@@ -306,7 +306,7 @@ class Deepchem2TorchGeometric(Dataset):
                 
                 
             self.data += [Data(x=d.x, z=d.z, pos=None, edge_index=d.edge_index,
-                            edge_attr=d.edge_attr, y=torch.tensor(self.labels[idx]),
+                            edge_attr=d.edge_attr, y=torch.tensor(self.labels[idx], dtype=torch.float32),
                             min_dfs_code=torch.tensor(min_code), min_dfs_index=torch.tensor(min_index), 
                             smiles=smiles, node_features=node_features, edge_features=edge_features)]
             
