@@ -107,6 +107,94 @@ class DFSCodeEncoder(nn.Module):
         return self_attn, eos_idx, src_key_padding_mask
 
 
+
+class DFSCodeEncoderBERT(nn.Module):
+    def __init__(self, emb_dim, nhead, nlayers, dim_feedforward=2048, max_nodes=400, max_edges=400, 
+                 atom_encoder=None, bond_encoder=None, dropout=0.1, missing_value=-1):
+        super().__init__()
+        self.ninp = emb_dim * 5
+        self.emb_dfs = PositionalEncoding(emb_dim, dropout=0, max_len=max_nodes)
+        dfs_emb = self.emb_dfs(torch.zeros((max_nodes, 1, emb_dim)))
+        dfs_emb = torch.squeeze(dfs_emb)
+        self.register_buffer('dfs_emb', dfs_emb)
+        self.emb_seq = PositionalEncoding(self.ninp, max_len=max_edges, dropout=dropout)
+        
+        if atom_encoder is None:
+            self.emb_atom = AtomEncoder(emb_dim=emb_dim)
+        else:
+            self.emb_atom = atom_encoder
+            
+        if bond_encoder is None:
+            self.emb_bond = BondEncoder(emb_dim=emb_dim)
+        else:
+            self.emb_bond = bond_encoder
+            
+        self.mixer = nn.Linear(self.ninp, self.ninp)
+        
+        self.enc = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=self.ninp, 
+                                                                    nhead=nhead,
+                                                                    dim_feedforward=dim_feedforward,
+                                                                    dropout=dropout), nlayers)
+        
+        self.missing_token = nn.Parameter(torch.empty(1, self.ninp), requires_grad=True)
+        nn.init.normal_(self.missing_token, mean=.0, std=.5)
+        
+    #for hugos dataloader:
+    #C = batch of codes
+    #N = batch of node features
+    #E = batch of edge features
+    def prepare_tokens(self, C, N, E, eos=None):
+        """
+        TODO: refactor
+        """
+        src = []
+        if eos is not None:
+            eos_idx = []
+        else:
+            eos_idx = None
+            
+        for code, n_feats, e_feats in zip(C, N, E):
+            mask = code[:, 0] != -1
+            atom_emb, bond_emb = self.emb_atom(n_feats), self.emb_bond(e_feats)
+            # embed all the non-missing values
+            code_input = torch.cat((self.dfs_emb[code[mask][:, 0]], self.dfs_emb[code[mask][:, 1]], 
+                                  atom_emb[code[mask][:, -3]], bond_emb[code[mask][:, -2]], atom_emb[code[mask][:,-1]]), dim=1)
+            # create missing tokens
+            code_missing = self.missing_token.expand(torch.sum(~mask),-1)
+            code_emb = torch.ones((code.shape[0], self.ninp), device=code_input.device)
+            code_emb[mask] *= code_input
+            code_emb[~mask] *= code_missing
+            # put everything into the right place
+            code_emb = self.mixer(code_emb) # allow the transformer to reshuffle features before the pe is added
+            if eos is not None:
+                eos_idx.append(code_emb.shape[0])
+                code_emb = torch.cat((code_emb, eos.view(1,-1)), dim=0)
+            src.append(code_emb)
+        batch = nn.utils.rnn.pad_sequence(src, padding_value=-1000)
+        src_key_padding_mask = (batch[:, :, 0] == -1000).T 
+        batch = self.emb_seq(batch * math.sqrt(self.ninp))
+        if eos is not None:
+            eos_idx = torch.tensor(eos_idx, device=C[0].device, dtype=torch.long)
+        return batch, eos_idx, src_key_padding_mask
+
+
+    def forward(self, C, N, E, class_token=None, eos=None):
+        batch, eos_idx, src_key_padding_mask = self.prepare_tokens(C, N, E, eos=eos)
+        # batch is of shape (sequence length, batch, d_model)
+        if class_token is None:
+            self_attn = self.enc(batch, src_key_padding_mask=src_key_padding_mask)
+        else:
+            src_key_padding_mask = torch.cat((torch.zeros((batch.shape[1], 1), dtype=torch.bool, device=batch.device), 
+                                              src_key_padding_mask), dim=1) # n_batch x n_seq
+            self_attn = self.enc(torch.cat((class_token.expand(-1, batch.shape[1], -1), batch), dim=0),
+                                 src_key_padding_mask=src_key_padding_mask)
+        
+        if eos_idx is not None and class_token is not None:
+            eos_idx += class_token.shape[0]
+            
+        return self_attn, eos_idx, src_key_padding_mask
+    
+
 class DFSCodeClassifier(nn.Module):
     def __init__(self, n_classes, emb_dim, nhead, nlayers, dim_feedforward=2048, max_nodes=400, max_edges=400, 
                  atom_encoder=None, bond_encoder=None):
@@ -127,12 +215,17 @@ class DFSCodeClassifier(nn.Module):
     
 class DFSCodeSeq2SeqFC(nn.Module):
     def __init__(self, n_atoms, n_bonds, emb_dim, nhead, nlayers, dim_feedforward=2048, max_nodes=400, max_edges=400, 
-                 atom_encoder=None, bond_encoder=None, dropout=0.1):
+                 atom_encoder=None, bond_encoder=None, dropout=0.1, use_BERT=True):
         super().__init__()
         self.ninp = emb_dim * 5
-        self.encoder = DFSCodeEncoder(emb_dim, nhead, nlayers, dim_feedforward=dim_feedforward,
-                                      max_nodes=max_nodes, max_edges=max_edges, 
-                                      atom_encoder=atom_encoder, bond_encoder=bond_encoder, dropout=dropout)
+        if use_BERT:
+            self.encoder = DFSCodeEncoderBERT(emb_dim, nhead, nlayers, dim_feedforward=dim_feedforward,
+                                          max_nodes=max_nodes, max_edges=max_edges, 
+                                          atom_encoder=atom_encoder, bond_encoder=bond_encoder, dropout=dropout)
+        else:
+            self.encoder = DFSCodeEncoder(emb_dim, nhead, nlayers, dim_feedforward=dim_feedforward,
+                                          max_nodes=max_nodes, max_edges=max_edges, 
+                                          atom_encoder=atom_encoder, bond_encoder=bond_encoder, dropout=dropout)
         self.fc_dfs_idx1 = nn.Linear(2*self.ninp, max_nodes)
         self.fc_dfs_idx2 = nn.Linear(2*self.ninp, max_nodes)
         self.fc_atom1 = nn.Linear(2*self.ninp, n_atoms)
@@ -180,9 +273,9 @@ class DFSCodeSeq2SeqFC(nn.Module):
         cls token
         eos token
         """
-        self_attn, eos_idx = self.encoder(C, N, E, class_token=self.cls_token, eos=self.eos) # seq x batch x feat
+        self_attn, eos_idx, _ = self.encoder(C, N, E, class_token=self.cls_token, eos=self.eos) # seq x batch x feat
         idx = torch.arange(len(eos_idx), device=C[0].device)
-        return self_attn, self_attn[0], self_attn[eos_idx, idx]
+        return self_attn[0]
 
 
 

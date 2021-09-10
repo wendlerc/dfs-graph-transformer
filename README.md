@@ -14,7 +14,7 @@ git pull https://gitlab.inf.ethz.ch/ewszola/dfs-code-representation
 cd dfs-code-representation
 git checkout vertexids
 pip install . 
-
+pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html
 ```
 
 Baseline:
