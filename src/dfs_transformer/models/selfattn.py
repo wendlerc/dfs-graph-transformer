@@ -57,3 +57,5 @@ class DFSCodeEncoder(nn.Module):
             self_attn = self.enc(torch.cat((class_token.expand(-1, batch.shape[1], -1), batch), dim=0),
                                  src_key_padding_mask=src_key_padding_mask)
         return self_attn, src_key_padding_mask
+    
+
