@@ -1,0 +1,74 @@
+(base) [chrisw@gpu-beast graph-transformer]$
+(base) [chrisw@gpu-beast graph-transformer]$ poetry shell
+Spawning shell within /home/chrisw/.cache/pypoetry/virtualenvs/graph-transformer-9jPERXQ--py3.8
+. /home/chrisw/.cache/pypoetry/virtualenvs/graph-transformer-9jPERXQ--py3.8/bin/activate
+(base) [chrisw@gpu-beast graph-transformer]$ . /home/chrisw/.cache/pypoetry/virtualenvs/graph-transformer-9jPERXQ--py3.8/bin/activate
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$ mkdir results/
+chembl/                      trash11.log                  trash20.log                  trash2.log                   trash39.log                  trash48.log                  trash57.log
+chembl_Hs/                   trash12.log                  trash21.log                  trash30.log                  trash3.log                   trash49.log                  trash58.log
+chembl_noHs/                 trash13.log                  trash22.log                  trash31.log                  trash40.log                  trash4.log                   trash59.log
+mymoleculenet/               trash14.log                  trash23.log                  trash32.log                  trash41.log                  trash50.log                  trash5.log
+mymoleculenet_plus_features/ trash15.log                  trash24.log                  trash33.log                  trash42.log                  trash51.log                  trash60.log
+profiling_chembl_noHs.txt    trash16.log                  trash25.log                  trash34.log                  trash43.log                  trash52.log                  trash6.log
+pubchem/                     trash17.log                  trash26.log                  trash35.log                  trash44.log                  trash53.log                  trash7.log
+trash/                       trash18.log                  trash27.log                  trash36.log                  trash45.log                  trash54.log                  trash8.log
+trash0.log                   trash19.log                  trash28.log                  trash37.log                  trash46.log                  trash55.log                  trash9.log
+trash10.log                  trash1.log                   trash29.log                  trash38.log                  trash47.log                  trash56.log
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$ mkdir results/pubchem/
+amd-server/              H/                       mini100k/                mini10k/                 noH/                     pubchem_noH_100k.tar.xz  pubchem_noH_10k.tar.xz
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$ mkdir results/pubchem/mini1000k
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$ cat preprocess_
+preprocess_chembl.sh        preprocess_pubchemdata.sh   preprocess_pubchem_mini.sh  preprocess_pubchem.sh       preprocess_qm9.sh
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$ cat preprocess_pubchem_mini.sh
+#!/bin/bash
+DIR=$1
+TIME_LIMIT=$2
+N=$3
+
+for i in {0..9}
+do
+    python scripts/pubchem/compute_dfs_codes.py with use_Hs=False add_loops=False nr=$i total=10 time_limit=$TIME_LIMIT max_lines=$N -F $DIR &> $DIR$i.log &
+    #sleep 1;
+done
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$ ./preprocess_pubchem_mini.sh results/pubchem/
+amd-server/              H/                       mini1000k/               mini100k/                mini10k/                 noH/                     pubchem_noH_100k.tar.xz  pubchem_noH_10k.tar.xz
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$ ./preprocess_pubchem_mini.sh results/pubchem/mini1000k/ 1
+(graph-transformer-9jPERXQ--py3.8) (base) [chrisw@gpu-beast graph-transformer]$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
