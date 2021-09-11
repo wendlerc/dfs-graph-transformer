@@ -42,7 +42,6 @@ class DFSCodeEncoder(nn.Module):
             mask = code[:, 0] != self.missing_value
             atom_emb, bond_emb = self.emb_atom(n_feats), self.emb_bond(e_feats)
             # embed all the non-missing values
-            print(mask.sum())
             code_input = torch.cat((self.dfs_emb[code[mask][:, 0]], 
                                     self.dfs_emb[code[mask][:, 1]], 
                                     atom_emb[code[mask][:, -3]], 
