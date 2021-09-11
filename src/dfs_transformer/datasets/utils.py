@@ -18,9 +18,59 @@ from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 import networkx as nx
 from chemprop.features.featurization import atom_features, bond_features
+import dfs_code
 
 
 bonds =  {BT.SINGLE: 0, BT.DOUBLE: 1, BT.AROMATIC: 2, BT.TRIPLE: 3, "loop": 4}
+
+
+def collate_minc_rndc_y(dlist):
+    z_batch = []
+    y_batch = []
+    edge_attr_batch = []
+    rnd_code_batch = []
+    min_code_batch = []
+    for d in dlist:
+        rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                         d.z.numpy().tolist(), 
+                                                                         np.argmax(d.edge_attr.numpy(), axis=1))
+        z_batch += [d.z]#[nn.functional.one_hot(d.z, 118)]#118 elements in periodic table
+        edge_attr_batch += [d.edge_attr]
+        rnd_code_batch += [torch.tensor(rnd_code)]
+        min_code_batch += [d.min_dfs_code]
+        y_batch += [d.y]
+    return rnd_code_batch, min_code_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
+
+
+def collate_minc_rndc_features_y(dlist):
+    node_batch = []
+    y_batch = []
+    edge_batch = []
+    rnd_code_batch = []
+    min_code_batch = []
+    for d in dlist:
+        rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                         d.z.numpy().tolist(), 
+                                                                         np.argmax(d.edge_attr.numpy(), axis=1))
+        node_batch += [d.node_features]
+        edge_batch += [d.edge_features]
+        rnd_code_batch += [torch.tensor(rnd_code)]
+        min_code_batch += [d.min_dfs_code]
+        y_batch += [d.y]
+    return rnd_code_batch, min_code_batch, node_batch, edge_batch, torch.cat(y_batch)
+
+
+def collate_smiles_y(dlist):
+    z_batch = []
+    y_batch = []
+    edge_attr_batch = []
+    smiles_batch = []
+    for d in dlist:
+        smiles_batch += [d.smiles]
+        z_batch += [F.one_hot(d.z, 118).numpy()]#118 elements in periodic table
+        edge_attr_batch += [d.edge_attr.numpy()]
+        y_batch += [d.y]
+    return smiles_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
 
 
 def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np.inf):
