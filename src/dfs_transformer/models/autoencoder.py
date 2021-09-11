@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from .transformers import PositionalEncoding, DFSCodeEncoder
+from .utils import PositionalEncoding
+from .selfattn import DFSCodeEncoder
 
 class DFSCodeAutoencoder(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 

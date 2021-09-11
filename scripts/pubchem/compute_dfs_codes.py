@@ -1,5 +1,5 @@
 import dfs_code
-import json
+import pickle
 from torch_geometric.datasets.qm9 import QM9
 import tqdm
 import numpy as np
@@ -28,11 +28,10 @@ def cfg(_log):
     smiles_file = "/mnt/ssd/datasets/pubchem_10m.txt/pubchem-10m.txt"
     #smiles_file = "/local/home/chris/pubchem-10m.txt"
     add_loops = False
-    dont_trim = True
     max_lines = np.inf#100000
 
 @exp.automain
-def main(smiles_file, nr, total, max_nodes, max_edges, dont_trim, time_limit, log_level, use_Hs, add_loops, max_lines, _run, _log):
+def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, max_lines, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     d_dict = {}
@@ -43,7 +42,8 @@ def main(smiles_file, nr, total, max_nodes, max_edges, dont_trim, time_limit, lo
             if idx % total == nr:
                 try:
                     time1 = time.time()
-                    d = smiles2graph(smiles, use_Hs, add_loops, dont_trim, max_nodes, max_edges)
+                    d = smiles2graph(smiles, useHs=use_Hs, addLoops=add_loops,
+                                     max_nodes=max_nodes, max_edges=max_edges)
                     code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                                  d.z.numpy().tolist(), 
                                                                                  np.argmax(d.edge_attr.numpy(), axis=1),
@@ -52,26 +52,26 @@ def main(smiles_file, nr, total, max_nodes, max_edges, dont_trim, time_limit, lo
                     exp.log_scalar('time %s'%smiles, time2-time1)
                     dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
                     data = {}
-                    data['x'] = d.x.detach().cpu().numpy().tolist()
-                    data['z'] = d.z.detach().cpu().numpy().tolist()
-                    data['edge_attr'] = d.edge_attr.detach().cpu().numpy().tolist()
-                    data['edge_index'] = d.edge_index.detach().cpu().numpy().tolist()
-                    data['atom_features'] = d.atom_features.detach().cpu().numpy().tolist()
-                    data['bond_features'] = d.bond_features.detach().cpu().numpy().tolist()
+                    data['x'] = d.x.detach().cpu().numpy()
+                    data['z'] = d.z.detach().cpu().numpy()
+                    data['edge_attr'] = d.edge_attr.detach().cpu().numpy()
+                    data['edge_index'] = d.edge_index.detach().cpu().numpy()
+                    data['atom_features'] = d.atom_features.detach().cpu().numpy()
+                    data['bond_features'] = d.bond_features.detach().cpu().numpy()
                     d_dict[smiles] = data
                 except:
                     logging.warning('%s failed'%smiles)
                     exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
                     continue
         
-    with NamedTemporaryFile(suffix='.json', delete=True) as f:
-        with open(f.name, 'w') as ff:
-            json.dump(dfs_codes, ff)
+    with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
+        with open(f.name, 'wb') as ff:
+            pickle.dump(dfs_codes, ff)
         _run.add_artifact(f.name, 'min_dfs_codes_split%d.json'%(nr))
     
-    with NamedTemporaryFile(suffix='.json', delete=True) as f:
-        with open(f.name, 'w') as ff:
-            json.dump(d_dict, ff)
+    with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
+        with open(f.name, 'wb') as ff:
+            pickle.dump(d_dict, ff)
         _run.add_artifact(f.name, 'data_split%d.json'%nr)
         
 

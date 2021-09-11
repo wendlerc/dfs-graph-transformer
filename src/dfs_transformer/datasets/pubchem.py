@@ -28,7 +28,7 @@ class PubChem(Dataset):
         self.data = []
         self.path = path
         self.n_used = n_used
-        if n_splits = None:
+        if n_splits is None:
             nums = []
             for name in glob.glob('%s/*'%path):
                 try:
