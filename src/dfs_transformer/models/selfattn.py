@@ -31,8 +31,8 @@ class DFSCodeEncoder(nn.Module):
                                                                     nhead=nhead,
                                                                     dim_feedforward=dim_feedforward,
                                                                     dropout=dropout), nlayers)
+        self.missing_value = missing_value
         if missing_value is not None:
-            self.missing_value = missing_value
             self.missing_token = nn.Parameter(torch.empty(1, self.ninp), requires_grad=True)
             nn.init.normal_(self.missing_token, mean=.0, std=.5)
         
