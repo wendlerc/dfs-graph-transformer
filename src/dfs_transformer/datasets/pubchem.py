@@ -1,4 +1,4 @@
-import json
+import pickle
 import numpy as np
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
@@ -50,16 +50,16 @@ class PubChem(Dataset):
         d_all = {}
         perm = np.random.permutation(self.n_splits)
         for i in tqdm.tqdm(perm[:self.n_used]):
-            dname = glob.glob(self.path+"/%d/min_dfs_codes_split*.json"%(i+1))[0]
-            didx = int(dname.split("split")[-1][:-5])
-            dname2 = self.path+"/%d/data_split%d.%s"%(i+1, didx, self.dformat)
-            with open(dname, 'r') as f:
-                codes = json.load(f)
+            dname = glob.glob(self.path+"/%d/min_dfs_codes_split*.pkl"%(i+1))[0]
+            didx = int(dname.split("split")[-1][:-4])
+            dname2 = self.path+"/%d/data_split%d.pkl"%(i+1, didx)
+            with open(dname, 'rb') as f:
+                codes = pickle.load(f)
                 for key, val in codes.items():
                     codes_all[key] = val
                     
-            with open(dname2, 'r') as f:
-                d_dict = json.load(f)
+            with open(dname2, 'rb') as f:
+                d_dict = pickle.load(f)
                 for key, val in d_dict.items():
                     d_all[key] = val
         
