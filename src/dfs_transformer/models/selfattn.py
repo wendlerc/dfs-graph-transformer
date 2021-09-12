@@ -125,7 +125,17 @@ class DFSCodeSeq2SeqFC(nn.Module):
         bond_logits = self.fc_bond(batch).permute(1,0,2)
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
-    def encode(self, C, N, E):
+    def encode(self, C, N, E, method="cls"):
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
-        return self_attn[0]
+        if method == "cls":
+            features = self_attn[0]
+        elif method == "sum":
+            features = torch.sum(self_attn, dim=0)
+        elif method == "mean":
+            features = torch.mean(self_attn, dim=0)
+        elif method == "max":
+            features = torch.max(self_attn, dim=0)
+        else:
+            raise ValueError("unsupported method")
+        return features
 

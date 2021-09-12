@@ -7,6 +7,7 @@ Created on Mon Aug 23 15:27:25 2021
 """
 from torch_geometric.data import Data
 import torch
+from torch.utils.data import Dataset
 import torch.nn.functional as F
 from torch_scatter import scatter
 import numpy as np
@@ -24,6 +25,27 @@ import dfs_code
 bonds =  {BT.SINGLE: 0, BT.DOUBLE: 1, BT.AROMATIC: 2, BT.TRIPLE: 3, "loop": 4}
 
 
+class FeaturesDataset(Dataset):
+    def __init__(self, smiles, labels, feature_dict):
+        self.smiles = smiles
+        self.labels = labels[:, np.newaxis]
+        self.features = feature_dict
+        self.data = []
+        self.prepare()
+    
+    def prepare(self):
+        for smiles, label in zip(self.smiles, self.labels):
+            if smiles in self.features:
+                self.data += [(self.features[smiles], label)]
+                
+    def __len__(self):
+        return len(self.data)
+  
+    def __getitem__(self, idx):
+        features, label = self.data[idx]
+        return features, label
+
+    
 def collate_minc_rndc_y(dlist):
     z_batch = []
     y_batch = []
@@ -58,6 +80,25 @@ def collate_minc_rndc_features_y(dlist):
         min_code_batch += [d.min_dfs_code]
         y_batch += [d.y]
     return rnd_code_batch, min_code_batch, node_batch, edge_batch, torch.cat(y_batch)
+
+def collate_smiles_minc_rndc_features_y(dlist):
+    node_batch = []
+    y_batch = []
+    edge_batch = []
+    rnd_code_batch = []
+    min_code_batch = []
+    smiles_batch = []
+    for d in dlist:
+        rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                         d.z.numpy().tolist(), 
+                                                                         np.argmax(d.edge_attr.numpy(), axis=1))
+        node_batch += [d.node_features]
+        edge_batch += [d.edge_features]
+        rnd_code_batch += [torch.tensor(rnd_code)]
+        min_code_batch += [d.min_dfs_code]
+        y_batch += [d.y]
+        smiles_batch += [d.smiles]
+    return smiles_batch, rnd_code_batch, min_code_batch, node_batch, edge_batch, torch.cat(y_batch)
 
 
 def collate_smiles_y(dlist):

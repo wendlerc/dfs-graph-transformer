@@ -67,11 +67,11 @@ def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, us
     with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
         with open(f.name, 'wb') as ff:
             pickle.dump(dfs_codes, ff)
-        _run.add_artifact(f.name, 'min_dfs_codes_split%d.json'%(nr))
+        _run.add_artifact(f.name, 'min_dfs_codes_split%d.pkl'%(nr))
     
     with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
         with open(f.name, 'wb') as ff:
             pickle.dump(d_dict, ff)
-        _run.add_artifact(f.name, 'data_split%d.json'%nr)
+        _run.add_artifact(f.name, 'data_split%d.pkl'%nr)
         
 
