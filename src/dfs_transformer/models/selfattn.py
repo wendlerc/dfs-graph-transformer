@@ -134,7 +134,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
         elif method == "mean":
             features = torch.mean(self_attn, dim=0)
         elif method == "max":
-            features = torch.max(self_attn, dim=0)
+            features = torch.max(self_attn, dim=0)[0]
         else:
             raise ValueError("unsupported method")
         return features
