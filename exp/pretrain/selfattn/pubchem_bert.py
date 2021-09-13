@@ -131,6 +131,9 @@ if __name__ == "__main__":
                 break
         if trainer.stop_training:
             break
+    trained_model_artifact = wandb.Artifact(args.name, type="model", description="trained selfattn model")
+    trained_model_artifact.add_dir(trainer.es_path)
+    run.log_artifact(trained_model_artifact)
         
         
         
