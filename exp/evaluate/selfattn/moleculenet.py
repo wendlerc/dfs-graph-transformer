@@ -139,7 +139,7 @@ for dataset in datasets:
     roc_avgs = []
     prc_avgs = []
     for rep in range(10):
-        model_head = nn.Linear(5*config.emb_dim, 1)
+        model_head = nn.Linear(features.shape[1], 1)
         model_head.to(device)
            
         trainset = pd.read_csv(config.data_dir_pattern%dataset+"%d/train.csv"%rep)

@@ -130,11 +130,16 @@ class DFSCodeSeq2SeqFC(nn.Module):
         if method == "cls":
             features = self_attn[0]
         elif method == "sum":
-            features = torch.sum(self_attn, dim=0)
+            features = torch.sum(self_attn[1:], dim=0)
         elif method == "mean":
-            features = torch.mean(self_attn, dim=0)
+            features = torch.mean(self_attn[1:], dim=0)
         elif method == "max":
-            features = torch.max(self_attn, dim=0)[0]
+            features = torch.max(self_attn[1:], dim=0)[0]
+        elif method == "cls-mean-max":
+            fcls = self_attn[0]
+            fmean = torch.mean(self_attn[1:], dim=0)
+            fmax = torch.max(self_attn[1:], dim=0)[0]
+            features = torch.cat((fcls, fmean, fmax), axis=1)
         else:
             raise ValueError("unsupported method")
         return features
