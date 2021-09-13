@@ -33,7 +33,7 @@ parser.add_argument('--features', type=str, default="chemprop")
 parser.add_argument('--n_node_features', type=int, default=133)
 parser.add_argument('--n_edge_features', type=int, default=14)
 parser.add_argument('--dim_feedforward', type=int, default=2048)
-parser.add_argument('--missing_value', type=int, default=-1) #bert:-1, rand2min: None
+parser.add_argument('--missing_value', type=int, default=None) #bert:-1, rand2min: None
 parser.add_argument('--use_min', type=int, default=1) # bert:1, rand2min: 0
 parser.add_argument('--fingerprint', type=str, default='cls')
 # training params

@@ -3,7 +3,7 @@ import torch.nn as nn
 from .utils import PositionalEncoding
 from .selfattn import DFSCodeEncoder
 
-class DFSCodeAutoencoder(nn.Module):
+class DFSCodeVariationalAutoencoder(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 
                  n_atoms, n_bonds, emb_dim=120, nhead=12, 
                  nlayers=6, n_memory_blocks=1, dim_feedforward=2048, 
@@ -17,7 +17,8 @@ class DFSCodeAutoencoder(nn.Module):
                                       dim_feedforward=dim_feedforward,
                                       max_nodes=max_nodes, max_edges=max_edges, 
                                       dropout=dropout, missing_value=missing_value)
-        self.bottleneck = nn.MultiheadAttention(self.ninp, nhead)
+        self.bottleneck_mean = nn.MultiheadAttention(self.ninp, nhead)
+        self.bottleneck_log_var = nn.MultiheadAttention(self.ninp, nhead)
         self.decoder = nn.TransformerDecoder(nn.TransformerDecoderLayer(d_model=self.ninp, 
                                                                     nhead=nhead,
                                                                     dim_feedforward=dim_feedforward,
@@ -38,9 +39,13 @@ class DFSCodeAutoencoder(nn.Module):
     def forward(self, C, N, E):
         self_attn, src_key_padding_mask = self.encoder(C, N, E) # seq x batch x feat
         query = torch.tile(self.memory_query, [1, self_attn.shape[1], 1]) # n_memory_blocks x batch x feat
-        attn_output, attn_output_weights = self.bottleneck(query, self_attn, self_attn,
+        memory_mean, _ = self.bottleneck_mean(query, self_attn, self_attn,
                                                            key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
-        memory = attn_output
+        memory_log_var, _ = self.bottleneck_log_var(query, self_attn, self_attn,
+                                                           key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
+        memory_std = torch.exp(0.5*memory_log_var)
+        memory = memory_mean + torch.randn_like(memory_mean)*memory_std
+        
         tgt = torch.tile(self.output_query[:self_attn.shape[0]].unsqueeze(1), [1, self_attn.shape[1], 1]) # seq x batch x feat
         cross_attn = self.decoder(tgt, memory, tgt_key_padding_mask=src_key_padding_mask) # seq x batch x feat
         batch = cross_attn.permute(1,0,2) # batch x seq x feat
@@ -56,6 +61,8 @@ class DFSCodeAutoencoder(nn.Module):
   
         self_attn, src_key_padding_mask = self.encoder(C, N, E) # seq x batch x feat
         query = torch.tile(self.memory_query, [1, self_attn.shape[1], 1]) # n_memory_blocks x batch x feat
-        memory, _ = self.bottleneck(query, self_attn, self_attn,
-                                    key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
-        return memory
+        memory_mean, _ = self.bottleneck_mean(query, self_attn, self_attn,
+                                                           key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
+        memory_log_var, _ = self.bottleneck_log_var(query, self_attn, self_attn,
+                                                           key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
+        return memory_mean, memory_log_var
