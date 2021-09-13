@@ -27,7 +27,7 @@ bold means important, stuff that people are working on contains names
 #### BERT pretraining 
 - [x] **write cluster ready pretraining script**
 - [ ] Chris **write cluster ready finetuning script** 
-- [ ] find good hyperparameters  
+- [ ] find good hyperparameters (actually I think this is semi-done, our selfattn converges pretty well)
 - [ ] investigate the behavior when the pretraining dataset size is increased
 
 
