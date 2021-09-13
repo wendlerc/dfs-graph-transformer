@@ -57,7 +57,7 @@ class DFSCodeVariationalAutoencoder(nn.Module):
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
     
-    def encode(self, C, N, E):
+    def encode(self, C, N, E, method=None):
   
         self_attn, src_key_padding_mask = self.encoder(C, N, E) # seq x batch x feat
         query = torch.tile(self.memory_query, [1, self_attn.shape[1], 1]) # n_memory_blocks x batch x feat
@@ -65,4 +65,6 @@ class DFSCodeVariationalAutoencoder(nn.Module):
                                                            key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
         memory_log_var, _ = self.bottleneck_log_var(query, self_attn, self_attn,
                                                            key_padding_mask=src_key_padding_mask) # n_memory_blocks x batch x feat
-        return memory_mean, memory_log_var
+        memory_mean = memory_mean.view((-1, self.ninp))
+        memory_log_var = memory_log_var.view((-1, self.ninp))
+        return torch.cat((memory_mean, memory_log_var), dim=1)
