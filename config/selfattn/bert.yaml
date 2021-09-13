@@ -15,7 +15,7 @@ model:
 data:
     n_files: 10
     n_splits: 1
-    n_iter_per_split: 1
+    n_iter_per_split: 10000
     #path: "/home/wendlerc/noH/timeout60_4/"
     path: "./results/pubchem/noH/10K"
     batch_size: 50
@@ -30,7 +30,7 @@ training:
     decay_factor: 0.8
     minimal_lr: 0.00000006
     batch_size: 50
-    accumulate_grads: 1
+    accumulate_grads: 2
     gpu_id: 0
     es_patience: 100
     es_improvement: 0.0

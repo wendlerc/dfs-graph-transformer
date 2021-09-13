@@ -89,15 +89,15 @@ if __name__ == "__main__":
         return loss 
     
     def acc(pred, target, idx=0):
-        dfs1, dfs2, atm1, atm2, bnd = pred
-        tgt = target[:, :, idx].view(-1)
+        tgt_idx = {0:0, 1:1, 2:2, 3:4, 4:3}
+        tgt = target[:, :, tgt_idx[idx]].view(-1)
         prd = pred[idx].reshape(tgt.shape[0], -1)
         mask = tgt != -1
         n_tgts = torch.sum(mask)
         acc = (torch.argmax(prd[mask], axis=1) == tgt[mask]).sum()/n_tgts
         return acc
     
-    fields = ['dfs1-acc', 'dfs2-acc', 'atm1-acc', 'atm2-acc', 'bnd-acc']
+    fields = ['acc-dfs1', 'acc-dfs2', 'acc-atm1', 'acc-atm2', 'acc-bnd']
     metrics = {field:functools.partial(acc, idx=idx) for idx, field in enumerate(fields)}
     model = DFSCodeSeq2SeqFC(nn.Linear(m.n_node_features, m.emb_dim),
                              nn.Linear(m.n_edge_features, m.emb_dim),
@@ -127,6 +127,10 @@ if __name__ == "__main__":
                                 pin_memory=False, collate_fn=collate_fn)
             trainer.loader = loader
             trainer.fit()
+            if trainer.stop_training:
+                break
+        if trainer.stop_training:
+            break
         
         
         

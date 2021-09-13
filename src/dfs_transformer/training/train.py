@@ -40,7 +40,7 @@ class Trainer():
         self.es_improvement = es_improvement
         self.es_patience = es_patience
         if es_path is None:
-            self.es_path = "./tmp/%d/"%np.random.randint(100000)
+            self.es_path = "./model/tmp/%d/"%np.random.randint(100000)
         else:
             self.es_path = es_path
         self.wandb = wandb_run 
@@ -54,7 +54,7 @@ class Trainer():
         self.model = self.model.to(self.device)
         os.makedirs(self.es_path, exist_ok=True)
         self.early_stopping = EarlyStopping(patience=es_patience, delta=es_improvement, path=self.es_path+'checkpoint.pt')
-        
+        self.stop_training = False
         
         
     def fit(self):
@@ -63,11 +63,10 @@ class Trainer():
         optim = self.optim
         lr_scheduler = self.lr_scheduler
         to_cuda = lambda T: [t.to(self.device) for t in T]
-        stop_training = False
         try:
             step = 0
             for epoch in range(self.n_epochs):
-                if stop_training:
+                if self.stop_training:
                     break
                 epoch_loss = 0
                 for i, data in enumerate(pbar):
@@ -95,17 +94,18 @@ class Trainer():
                         self.early_stopping(epoch_loss, model)
                         lr_scheduler.step(epoch_loss)
                         if self.early_stopping.early_stop:
-                            stop_training = True
+                            self.stop_training = True
                             break
 
                         if curr_lr < self.minimal_lr:
-                            stop_training = True
+                            self.stop_training = True
                             break
                         # TODO: add artifact and upload model to wandb
-
+                    step += 1
             
         except KeyboardInterrupt:
             torch.save(model.state_dict(), self.es_path+'checkpoint_keyboardinterrupt.pt')
+            self.stop_training = True
         
         
         
