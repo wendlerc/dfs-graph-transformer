@@ -8,6 +8,7 @@ Created on Wed Jul 21 16:43:25 2021
 
 import numpy as np
 import torch
+import os
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience.
