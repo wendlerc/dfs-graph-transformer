@@ -33,8 +33,8 @@ parser.add_argument('--features', type=str, default="chemprop")
 parser.add_argument('--n_node_features', type=int, default=133)
 parser.add_argument('--n_edge_features', type=int, default=14)
 parser.add_argument('--dim_feedforward', type=int, default=2048)
-parser.add_argument('--missing_value', type=int, default=-1)
-parser.add_argument('--use_min', type=int, default=1)
+parser.add_argument('--missing_value', type=int, default=-1) #bert:-1, rand2min: None
+parser.add_argument('--use_min', type=int, default=1) # bert:1, rand2min: 0
 parser.add_argument('--fingerprint', type=str, default='cls')
 # training params
 parser.add_argument('--lr', type=float, default=0.003)
@@ -47,7 +47,7 @@ parser.add_argument('--batch_size_preprocessing', type=int, default=10)
 parser.add_argument('--accumulate_grads', type=int, default=1)
 parser.add_argument('--valid_patience', type=int, default=25)
 parser.add_argument('--valid_minimal_improvement', type=float, default=0)
-parser.add_argument('--pretrained_dir', type=str, default="./models/pubchem10M/features_selfattention/medium/converged/")
+parser.add_argument('--pretrained_dir', type=str, default="./models/pubchem10M/features_selfattention/bert/")
 parser.add_argument('--data_dir_pattern', type=str, default="./datasets/mymoleculenet/%s/")
 parser.add_argument('--load_dir_pattern', type=str, default="./results/mymoleculenet_plus_features/%s/1/")
 parser.add_argument('--model_dir_pattern', type=str, default="./models/mymoleculenet/%s/")
@@ -71,7 +71,7 @@ def score(loader, model):
         for batch in tqdm.tqdm(loader):
             features, y = batch
             y = y.to(device).squeeze()
-            pred = model_head(features.to(device)).squeeze()
+            pred = model(features.to(device)).squeeze()
             pred_np = pred.detach().cpu().numpy().tolist()
             y_np = y.detach().cpu().numpy().tolist()
             full_preds += pred_np
