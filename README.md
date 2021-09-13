@@ -1,4 +1,5 @@
-# TODO bold means important: 
+# TODO: 
+bold means important, stuff that people are working on contains names
 ### Evaluate the following baselines on our moleculenet splits
 - [x] DMPNN
 - [ ] Hugo **GROVER**, [git](https://github.com/tencent-ailab/grover) [paper](https://arxiv.org/abs/2007.02835)
@@ -11,7 +12,7 @@
 - [ ] **rewrite smiles2graph such that also the positions of the atoms are computed as features**
 - [ ] implement a better metric than accuracy to assess the quality of the fit of the pretraining 
 #### improve the results
-- [ ] **implement a version that utilizes self-loops**
+- [ ] Chris **implement a version that utilizes self-loops**
 - [ ] make larger model converge
 - [ ] check whether having multiple cls tokens is helpful
 - [ ] tweak the way the gradients are propagated through the cls token 
@@ -19,13 +20,13 @@
 - [ ] add a term to the pretraining objective that depends on the features  
 - [ ] a transformer decoder that has the hidden states of a GNN as memory
 #### random DFS code to minimal DFS code pretraining 
-- [ ] **write cluster ready pretraining script**
-- [ ] **write cluster ready finetuning script** 
+- [ ] Chris **write cluster ready pretraining script**
+- [ ] Chris **write cluster ready finetuning script** 
 - [ ] **find good hyperparameters**  
 - [ ] investigate the behavior when the pretraining dataset size is increased
 #### BERT pretraining 
 - [x] **write cluster ready pretraining script**
-- [ ] **write cluster ready finetuning script** 
+- [ ] Chris **write cluster ready finetuning script** 
 - [ ] find good hyperparameters  
 - [ ] investigate the behavior when the pretraining dataset size is increased
 
