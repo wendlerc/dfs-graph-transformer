@@ -102,7 +102,7 @@ print('loaded pretrained model')
 datasets = ['bbbp', 'clintox', 'tox21', 'hiv']
 
 for dataset in datasets:
-    run = wandb.init(project='moleculenet10-clean', entity='chrisxx', name=args.name, reinit=True)
+    run = wandb.init(project='moleculenet10', entity='dfstransformer', name=args.name, reinit=True)
     config = wandb.config
     config.dataset = dataset
     wandb.config.update(args)
