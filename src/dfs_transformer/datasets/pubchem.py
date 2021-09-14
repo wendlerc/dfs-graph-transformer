@@ -8,9 +8,9 @@ import tqdm
 
 class PubChem(Dataset):
     """PubChem dataset of molecules and minimal DFS codes."""
-    def __init__(self, path, n_used = 8, n_splits = None, max_nodes=np.inf,
+    def __init__(self, path, n_used = None, n_splits = None, max_nodes=np.inf,
                  max_edges=np.inf, useHs=False, addLoops=False, memoryEfficient=False,
-                 transform=None, n_mols_per_dataset=np.inf):
+                 transform=None, exclude=[]):
         """
         Parameters
         ----------
@@ -26,8 +26,8 @@ class PubChem(Dataset):
         """
         self.path = path
         self.data = []
+        self.smiles = []
         self.path = path
-        self.n_used = n_used
         if n_splits is None:
             nums = []
             for name in glob.glob('%s/*'%path):
@@ -37,11 +37,15 @@ class PubChem(Dataset):
                     continue
             n_splits = max(nums)
         self.n_splits = n_splits
+        if n_used is None:
+            self.n_used = self.n_splits
+        else:
+            self.n_used = n_used
         self.useHs = useHs
         self.addLoops = addLoops
-        self.n_mols_per_dataset = n_mols_per_dataset
         self.max_nodes = max_nodes
         self.max_edges = max_edges
+        self.exclude = set(exclude)
         self.prepare()
         
         
@@ -56,16 +60,16 @@ class PubChem(Dataset):
             with open(dname, 'rb') as f:
                 codes = pickle.load(f)
                 for key, val in codes.items():
-                    codes_all[key] = val
+                    if key not in self.exclude:
+                        codes_all[key] = val
                     
             with open(dname2, 'rb') as f:
                 d_dict = pickle.load(f)
                 for key, val in d_dict.items():
-                    d_all[key] = val
+                    if key not in self.exclude:
+                        d_all[key] = val
         
         for smiles, code in tqdm.tqdm(codes_all.items()):
-            if len(self.data) > self.n_mols_per_dataset:
-                break
             if code['min_dfs_code'] is not None and len(code['min_dfs_code']) > 1:
                 d = d_all[smiles]
                 if len(d['z']) > self.max_nodes:
@@ -84,6 +88,7 @@ class PubChem(Dataset):
                              node_features=torch.tensor(d['atom_features'], dtype=torch.float32),
                              edge_features=torch.tensor(d['bond_features'], dtype=torch.float32))
                 self.data += [data_]   
+                self.smiles += [smiles]
         
     def __len__(self):
         return len(self.data)

@@ -12,13 +12,13 @@ model:
     n_edge_features: 14
     n_class_tokens: 1
     
-    
 data:
     n_files: 10
     n_splits: 1
     n_iter_per_split: 10000
     #path: "/home/wendlerc/noH/timeout60_4/"
-    path: "./results/pubchem/noH/10K"
+    path: "./results/pubchem/noH/10K/"
+    valid_path: "./results/pubchem/noH/validation/"
     batch_size: 50
     
 training:

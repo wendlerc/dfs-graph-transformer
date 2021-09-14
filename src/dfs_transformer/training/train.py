@@ -11,20 +11,22 @@ import tqdm
 from .early_stopping import EarlyStopping
 import numpy as np
 import os
+from collections import defaultdict
 
 
 class Trainer():
-    def __init__(self, model, loader, loss, metrics={}, optimizer=torch.optim.Adam,
+    def __init__(self, model, loader, loss, validloader=None, metrics={}, optimizer=torch.optim.Adam,
                  n_epochs=1000, accumulate_grads=1, lr=0.0003, lr_patience=5, 
                  lr_adjustment_period=500, decay_factor=0.8, minimal_lr=6e-8, 
-                 gpu_id=0, es_improvement=0.0, es_patience=100, es_path=None,
-                 wandb_run = None, **kwargs):
+                 lr_argument = lambda log: log['loss'], gpu_id=0, es_improvement=0.0, 
+                 es_patience=100, es_path=None, wandb_run = None, **kwargs):
         """
         data = next(iter(loader)),
         loss and metrics will be computed on model(data[:-1]), data[-1] 
         """
         self.model = model
         self.loader = loader
+        self.validloader = validloader
         self.loss = loss
         self.metrics = metrics
         self.optimizer = optimizer
@@ -33,6 +35,7 @@ class Trainer():
         self.lr = lr
         self.lr_patience = lr_patience
         self.lr_adjustment_period = lr_adjustment_period
+        self.lr_argument = lr_argument
         self.decay_factor = decay_factor
         self.minimal_lr = minimal_lr
         self.gpu_id = gpu_id
@@ -73,8 +76,11 @@ class Trainer():
                 if self.stop_training:
                     break
                 epoch_loss = 0
+                epoch_metric = defaultdict(float)
                 pbar = tqdm.tqdm(self.loader)
                 for i, data in enumerate(pbar):
+                    self.model.train()
+                    log = {}
                     if step % self.accumulate_grads == 0: #bei 0 wollen wir das
                         optim.zero_grad()
                     inputs = [to_cuda(d) for d in data[:-1]]
@@ -86,18 +92,27 @@ class Trainer():
                         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                         optim.step() 
                     epoch_loss = (epoch_loss*i + loss.item())/(i+1)
-                    self.wandb.log({'batch_loss': loss, 'loss':epoch_loss})
+                    log['batch-loss'] = loss
+                    log['loss'] = epoch_loss
+                    
                     pbar_string = "Epoch %d: loss %2.6f"%(epoch+1, epoch_loss)
                     for name, metric in self.metrics.items():
                         res = metric(pred, output)
-                        self.wandb.log({name: res})
+                        epoch_metric[name] = (epoch_metric[name]*i + res.item())/(i+1)
+                        log['batch-'+name] = res
+                        log[name] = epoch_metric[name]
                         pbar_string += " %2.4f"%res
                     
                     curr_lr = list(optim.param_groups)[0]['lr']
-                    self.wandb.log({'lr':curr_lr})
+                    log['learning rate'] = curr_lr
+                    pbar.set_description(pbar_string)
+                    self.wandb.log(log)
                     if step % self.lr_adjustment_period == 0:
                         self.early_stopping(epoch_loss, model)
-                        lr_scheduler.step(epoch_loss)
+                        if self.lr_argument is not None:
+                            lr_scheduler.step(self.lr_argument(log))
+                        else:
+                            lr_scheduler.step()
                         if self.early_stopping.early_stop:
                             self.stop_training = True
                             break
@@ -105,8 +120,28 @@ class Trainer():
                         if curr_lr < self.minimal_lr:
                             self.stop_training = True
                             break
-                        # TODO: add artifact and upload model to wandb
                     step += 1
+                    
+                self.model.eval()
+                if self.validloader is not None:
+                    pbar = tqdm.tqdm(self.validloader)
+                    for i, data in enumerate(pbar):
+                        log = {}
+                        inputs = [to_cuda(d) for d in data[:-1]]
+                        output = to_cuda(data[-1])
+                        pred = self.model(*inputs)
+                        loss = self.loss(pred, output)
+                        epoch_loss = (epoch_loss*i + loss.item())/(i+1)
+                        log['valid-loss'] = epoch_loss
+                        pbar_string = "Valid %d: loss %2.6f"%(epoch+1, epoch_loss)
+                        for name, metric in self.metrics.items():
+                            res = metric(pred, output)
+                            epoch_metric[name] = (epoch_metric[name]*i + res.item())/(i+1)
+                            log['valid-'+name] = epoch_metric[name]
+                            pbar_string += " %2.4f"%res
+                        pbar.set_description(pbar_string)
+                    self.wandb.log(log)
+                    
             
         except KeyboardInterrupt:
             torch.save(model.state_dict(), self.es_path+'checkpoint_keyboardinterrupt.pt')

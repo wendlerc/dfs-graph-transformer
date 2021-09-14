@@ -28,16 +28,19 @@ def cfg(_log):
     smiles_file = "/mnt/ssd/datasets/pubchem_10m.txt/pubchem-10m.txt"
     #smiles_file = "/local/home/chris/pubchem-10m.txt"
     add_loops = False
+    start_idx = 0
     max_lines = np.inf#100000
 
 @exp.automain
-def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, max_lines, _run, _log):
+def main(smiles_file, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, start_idx, max_lines, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     d_dict = {}
     with open(smiles_file, "r") as f:
         for idx, smiles in tqdm.tqdm(enumerate(f.readlines())):
-            if idx >= max_lines:
+            if idx < start_idx:
+                continue
+            if idx >= start_idx + max_lines:
                 break
             if idx % total == nr:
                 try:

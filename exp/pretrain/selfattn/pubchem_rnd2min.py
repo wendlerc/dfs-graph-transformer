@@ -80,14 +80,22 @@ if __name__ == "__main__":
     elif t.pretrained_dir is not None:
         model.load_state_dict(torch.load(t.pretrained_dir, map_location=device))
     
-    trainer = Trainer(model, None, loss, metrics=metrics, wandb_run = run, **t)
+    validloader = None
+    if d.valid_path is not None:
+        validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges)
+        validloader = DataLoader(validset, batch_size=d.batch_size, shuffle=True, 
+                                 pin_memory=False, collate_fn=collate_fn)
+        exclude = validset.smiles
+    
+    trainer = Trainer(model, None, loss, validloader=validloader, metrics=metrics, 
+                      wandb_run = run, **t)
     trainer.n_epochs = d.n_iter_per_split
     
     for epoch in range(t.n_epochs):
         for split in range(d.n_splits):
             n_ids = d.n_files//d.n_splits
             dataset = PubChem(d.path, n_used = n_ids, max_nodes=m.max_nodes, 
-                              max_edges=m.max_edges)
+                              max_edges=m.max_edges, exclude=exclude)
             loader = DataLoader(dataset, batch_size=d.batch_size, shuffle=True, 
                                 pin_memory=False, collate_fn=collate_fn)
             trainer.loader = loader
