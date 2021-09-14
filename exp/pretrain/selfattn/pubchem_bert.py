@@ -42,16 +42,15 @@ if __name__ == "__main__":
     
     with open(args.yaml) as file:
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
-
+    
+    for key,value in args.overwrite.items():
+        for key1,value1 in value.items():
+            config[key][key1] = value1
     
     run = wandb.init(mode=args.wandb_mode, 
                      project=args.wandb_project, 
                      entity=args.wandb_entity, 
                      name=args.name, config=config)
-    
-    for key,value in args.overwrite.items():
-        for key1,value1 in value.items():
-            config[key][key1] = value1
     
     m = config.model
     t = config.training
@@ -100,14 +99,22 @@ if __name__ == "__main__":
     elif t.pretrained_dir is not None:
         model.load_state_dict(torch.load(t.pretrained_dir, map_location=device))
     
-    trainer = Trainer(model, None, loss, metrics=metrics, wandb_run = run, **t)
+    validloader = None
+    if d.valid_path is not None:
+        validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges)
+        validloader = DataLoader(validset, batch_size=d.batch_size, shuffle=True, 
+                                 pin_memory=False, collate_fn=collate_fn)
+        exclude = validset.smiles
+    
+    trainer = Trainer(model, None, loss, validloader=validloader, metrics=metrics, 
+                      wandb_run = run, **t)
     trainer.n_epochs = d.n_iter_per_split
     
     for epoch in range(t.n_epochs):
         for split in range(d.n_splits):
             n_ids = d.n_files//d.n_splits
             dataset = PubChem(d.path, n_used = n_ids, max_nodes=m.max_nodes, 
-                              max_edges=m.max_edges)
+                              max_edges=m.max_edges, exclude=exclude)
             loader = DataLoader(dataset, batch_size=d.batch_size, shuffle=True, 
                                 pin_memory=False, collate_fn=collate_fn)
             trainer.loader = loader
@@ -119,7 +126,6 @@ if __name__ == "__main__":
     trained_model_artifact = wandb.Artifact(args.name, type="model", description="trained selfattn model")
     trained_model_artifact.add_dir(trainer.es_path)
     run.log_artifact(trained_model_artifact)
-        
         
         
     
