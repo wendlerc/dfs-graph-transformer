@@ -58,22 +58,27 @@ class Trainer():
         
         
     def fit(self):
-        pbar = tqdm.tqdm(self.loader)
         model = self.model
         optim = self.optim
         lr_scheduler = self.lr_scheduler
-        to_cuda = lambda T: [t.to(self.device) for t in T]
+        def to_cuda(T):
+            if type(T) is list:
+                return [t.to(self.device) for t in T]
+            else:
+                return T.to(self.device)
+            
         try:
             step = 0
             for epoch in range(self.n_epochs):
                 if self.stop_training:
                     break
                 epoch_loss = 0
+                pbar = tqdm.tqdm(self.loader)
                 for i, data in enumerate(pbar):
                     if step % self.accumulate_grads == 0: #bei 0 wollen wir das
                         optim.zero_grad()
                     inputs = [to_cuda(d) for d in data[:-1]]
-                    output = data[-1].to(self.device)
+                    output = to_cuda(data[-1])
                     pred = self.model(*inputs)
                     loss = self.loss(pred, output)
                     loss.backward()

@@ -7,7 +7,7 @@ model:
     max_nodes: 250
     max_edges: 500
     dim_feedforward: 2048
-    missing_value: -1
+    missing_value: null
     n_node_features: 133
     n_edge_features: 14
     n_class_tokens: 1
@@ -22,9 +22,7 @@ data:
     batch_size: 50
     
 training:
-    mode: min2min
-    fraction_missing: 0.15
-    lr: 0.00003
+    lr: 0.0003
     n_epochs: 10000
     lr_adjustment_period: 500
     lr_patience: 5

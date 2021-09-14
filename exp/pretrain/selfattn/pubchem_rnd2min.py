@@ -14,28 +14,12 @@ import yaml
 import functools
 from ml_collections import ConfigDict
 
-def BERTize(codes, fraction_missing=0.15):
-    inputs = []
-    targets = []
-    for code in codes:
-        n = len(code)
-        perm = np.random.permutation(n)
-        target_idx = perm[:int(fraction_missing*n)]
-        input_idx = perm[int(fraction_missing*n):]
-        inp = code.clone()
-        target = code.clone()
-        target[input_idx] = -1
-        inp[target_idx] = -1
-        inputs += [inp]
-        targets += [target]
-    return inputs, targets
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--wandb_entity', type=str, default="chrisxx")
     parser.add_argument('--wandb_project', type=str, default="pubchem-bert")
     parser.add_argument('--wandb_mode', type=str, default="online")
-    parser.add_argument('--yaml', type=str, default="./config/selfattn/bert.yaml") 
+    parser.add_argument('--yaml', type=str, default="./config/selfattn/rnd2min.yaml") 
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--overwrite', type=json.loads, default="{}")
     args = parser.parse_args()
@@ -66,21 +50,17 @@ if __name__ == "__main__":
         node_batch = [] 
         edge_batch = []
         min_code_batch = []
+        rnd_code_batch = []
         for d in dlist:
             node_batch += [d.node_features]
             edge_batch += [d.edge_features]
-            if config.training.mode == "min2min":
-                min_code_batch += [d.min_dfs_code]
-            elif config.training.mode == "rnd2rnd":
-                rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
-                                                                         d.z.numpy().tolist(), 
-                                                                         np.argmax(d.edge_attr.numpy(), axis=1))
-                min_code_batch += [rnd_code]
-            else:
-                raise ValueError("unknown config.training.mode %s"%config.training.mode)
-        inputs, outputs = BERTize(min_code_batch, config.training.fraction_missing)
-        targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1)
-        return inputs, node_batch, edge_batch, targets 
+            min_code_batch += [d.min_dfs_code]
+            rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                     d.z.numpy().tolist(), 
+                                                                     np.argmax(d.edge_attr.numpy(), axis=1))
+            rnd_code_batch += [torch.tensor(rnd_code)]
+        targets = nn.utils.rnn.pad_sequence(min_code_batch, padding_value=-1)
+        return rnd_code_batch, node_batch, edge_batch, targets 
     
     fields = ['acc-dfs1', 'acc-dfs2', 'acc-atm1', 'acc-atm2', 'acc-bnd']
     metrics = {field:functools.partial(seq_acc, idx=idx) for idx, field in enumerate(fields)}

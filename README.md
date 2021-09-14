@@ -23,3 +23,10 @@ pip install git+https://github.com/bp-kelley/descriptastorus
 
 pip install chemprop
 
+Examples:
+
+Overwrite run parameters example:
+
+```bash
+python exp/pretrain/selfattn/pubchem_bert.py --name bert-10K --wandb_mode offline --overwrite '{"training" : {"n_epochs" : 1}, "data" : {"n_iter_per_split" : 2}}'
+```
