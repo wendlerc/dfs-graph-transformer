@@ -121,6 +121,7 @@ class Trainer():
                             self.stop_training = True
                             break
                     step += 1
+                self.wandb.log({'train-'+key: value for key, value in log.items() if 'batch' not in key})
                     
                 self.model.eval()
                 if self.validloader is not None:
