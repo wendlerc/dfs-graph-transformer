@@ -38,33 +38,7 @@ training:
     es_path: null
     load_last: True
     
-finetune:
-    data_dir_pattern: "./datasets/mymoleculenet/%s/"
-    load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
-    model_dir_pattern: "./models/%s/"
-    lr: 0.003
-    #lr: 0.000003
-    weight_decay: 0.1
-    clip_gradient: 0.5
-    n_epochs: 25
-    lr_patience: 3
-    decay_factor: 0.8
-    minimal_lr: 0.00000006
-    batch_size: 50
-    accumulate_grads: 2
-    gpu_id: 0
-    es_patience: 10
-    es_improvement: 0.0
-    pretrained_project: 'pubchem-bert'
-    pretrained_entity: 'chrisxx'
-    pretrained_model: 'bert-100K'
-    es_path: null
-    load_last: True
-    use_min: True
-    fingerprint: 'cls' # mean, max, sum, cls-mean-max
-    strict: True
-    dataset: 'bbbp'
-    seed: 123
+
     
     
 

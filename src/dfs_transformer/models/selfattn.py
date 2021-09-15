@@ -82,7 +82,7 @@ class DFSCodeEncoder(nn.Module):
         if class_token is None:
             self_attn = self.enc(batch, src_key_padding_mask=src_key_padding_mask)
         else:
-            src_key_padding_mask = torch.cat((torch.zeros((batch.shape[1], 1), dtype=torch.bool, device=batch.device), 
+            src_key_padding_mask = torch.cat((torch.zeros((batch.shape[1], class_token.shape[0]), dtype=torch.bool, device=batch.device), 
                                               src_key_padding_mask), dim=1) # n_batch x n_seq
             self_attn = self.enc(torch.cat((class_token.expand(-1, batch.shape[1], -1), batch), dim=0),
                                  src_key_padding_mask=src_key_padding_mask)
@@ -90,14 +90,16 @@ class DFSCodeEncoder(nn.Module):
     
 
 class DFSCodeSeq2SeqFC(nn.Module):
-    def __init__(self, atom_embedding, bond_embedding, 
+    def __init__(self, n_node_features, n_edge_features, 
                  n_atoms, n_bonds, emb_dim=120, nhead=12, 
                  nlayers=6, n_class_tokens=1, dim_feedforward=2048, 
                  max_nodes=250, max_edges=500, dropout=0.1, 
-                 missing_value=None):
+                 missing_value=None, **kwargs):
         super().__init__()
         self.ninp = emb_dim * 5
         self.n_class_tokens = n_class_tokens
+        atom_embedding = nn.Linear(n_node_features, emb_dim)
+        bond_embedding = nn.Linear(n_edge_features, emb_dim)
         self.encoder = DFSCodeEncoder(atom_embedding, bond_embedding, 
                                       emb_dim=emb_dim, nhead=nhead, nlayers=nlayers, 
                                       dim_feedforward=dim_feedforward,
@@ -114,15 +116,18 @@ class DFSCodeSeq2SeqFC(nn.Module):
         
     def forward(self, C, N, E):
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
-        batch_feats = self_attn[1:].permute(1,0,2) # batch x seq x feat
-        batch_global = torch.unsqueeze(self_attn[0], 0).permute(1, 0, 2) # batch x 1 x feat
-        batch_global = torch.tile(batch_global, [1, batch_feats.shape[1], 1]) # batch x seq x feat
+        
+        batch_feats = self_attn[self.n_class_tokens:] 
+        batch_global = self_attn[:self.n_class_tokens]
+        batch_global = batch_global.view(1, -1, self.n_class_tokens * self.ninp)
+        batch_global = batch_global.expand(batch_feats.shape[0], -1, -1) # batch x seq x ncls * feats
         batch = torch.cat((batch_feats, batch_global), dim=2) # each of the prediction heads gets cls token as additional input
-        dfs_idx1_logits = self.fc_dfs_idx1(batch).permute(1,0,2) #seq x batch x feat
-        dfs_idx2_logits = self.fc_dfs_idx2(batch).permute(1,0,2)
-        atom1_logits = self.fc_atom1(batch).permute(1,0,2)
-        atom2_logits = self.fc_atom2(batch).permute(1,0,2)
-        bond_logits = self.fc_bond(batch).permute(1,0,2)
+        
+        dfs_idx1_logits = self.fc_dfs_idx1(batch) #seq x batch x feat
+        dfs_idx2_logits = self.fc_dfs_idx2(batch)
+        atom1_logits = self.fc_atom1(batch)
+        atom2_logits = self.fc_atom2(batch)
+        bond_logits = self.fc_bond(batch)
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
     def encode(self, C, N, E, method="cls"):

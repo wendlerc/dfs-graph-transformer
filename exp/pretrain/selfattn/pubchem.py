@@ -57,16 +57,7 @@ if __name__ == "__main__":
     
     fields = ['acc-dfs1', 'acc-dfs2', 'acc-atm1', 'acc-atm2', 'acc-bnd']
     metrics = {field:functools.partial(seq_acc, idx=idx) for idx, field in enumerate(fields)}
-    model = DFSCodeSeq2SeqFC(nn.Linear(m.n_node_features, m.emb_dim),
-                             nn.Linear(m.n_edge_features, m.emb_dim),
-                             n_atoms=m.n_atoms,
-                             n_bonds=m.n_bonds, 
-                             emb_dim=m.emb_dim, 
-                             nhead=m.nhead, 
-                             nlayers=m.nlayers, 
-                             max_nodes=m.max_nodes, 
-                             max_edges=m.max_edges,
-                             missing_value=m.missing_value)
+    model = DFSCodeSeq2SeqFC(**m)
     
     if t.load_last and t.es_path is not None:
         model.load_state_dict(torch.load(t.es_path, map_location=device))

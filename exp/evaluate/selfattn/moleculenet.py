@@ -19,6 +19,44 @@ import argparse
 import yaml
 from ml_collections import ConfigDict
 
+def load_selfattn(t, device):
+    model_dir = None
+    model_yaml = None
+    if t.pretrained_model is not None:
+        # download pretrained model
+        run = wandb.init(mode=args.wandb_mode, 
+                         project=t.pretrained_project, 
+                         entity=t.pretrained_entity, 
+                         job_type="inference")
+        model_at = run.use_artifact(t.pretrained_model + ":latest")
+        model_dir = model_at.download()
+        run.finish()
+    elif t.pretrained_dir is not None:
+        model_dir = t.pretrained_dir
+        
+    model_yaml = model_dir+"/config.yaml"
+    if not os.path.isfile(model_yaml):
+        model_yaml = t.pretrained_yaml
+    
+    with open(model_yaml) as file:
+        config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
+    m = config.model
+        
+    model = DFSCodeSeq2SeqFC(nn.Linear(m.n_node_features, m.emb_dim),
+                         nn.Linear(m.n_edge_features, m.emb_dim),
+                         n_atoms=m.n_atoms,
+                         n_bonds=m.n_bonds, 
+                         emb_dim=m.emb_dim, 
+                         nhead=m.nhead, 
+                         nlayers=m.nlayers, 
+                         max_nodes=m.max_nodes, 
+                         max_edges=m.max_edges,
+                         missing_value=m.missing_value)
+    if model_dir is not None:
+        model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
+        
+    return model
+
 def score(loader, model):
     with torch.no_grad():
         full_preds, target = [], []
@@ -42,7 +80,7 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
     parser.add_argument('--wandb_project', type=str, default="moleculenet10")
     parser.add_argument('--wandb_mode', type=str, default="online")
-    parser.add_argument('--yaml', type=str, default="./config/selfattn/bert.yaml") 
+    parser.add_argument('--yaml', type=str, default="./config/selfattn/finetune_bert.yaml") 
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--overwrite', type=json.loads, default="{}")
     args = parser.parse_args()
@@ -54,12 +92,8 @@ if __name__ == "__main__":
         for key1,value1 in value.items():
             config[key][key1] = value1
     
-    m = config.model
-    t = config.finetune
-    d = config.data
-    print(config)
-
-    
+    t = config
+    print(t)
 
     random.seed(t.seed)
     torch.manual_seed(t.seed)
@@ -68,28 +102,8 @@ if __name__ == "__main__":
     device = torch.device('cuda:%d'%t.gpu_id if torch.cuda.is_available()  else 'cpu')
     to_cuda = lambda T: [t.to(device) for t in T]
     
-    
-    model = DFSCodeSeq2SeqFC(nn.Linear(m.n_node_features, m.emb_dim),
-                             nn.Linear(m.n_edge_features, m.emb_dim),
-                             n_atoms=m.n_atoms,
-                             n_bonds=m.n_bonds, 
-                             emb_dim=m.emb_dim, 
-                             nhead=m.nhead, 
-                             nlayers=m.nlayers, 
-                             max_nodes=m.max_nodes, 
-                             max_edges=m.max_edges,
-                             missing_value=m.missing_value)
-    
-    # download pretrained model
-    run = wandb.init(mode=args.wandb_mode, 
-                     project=t.pretrained_project, 
-                     entity=t.pretrained_entity, 
-                     job_type="inference")
-    model_at = run.use_artifact(t.pretrained_model + ":latest")
-    model_dir = model_at.download()
-    model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
+    model = load_selfattn(t, device)
     model.to(device)
-    run.finish()
     print('loaded pretrained model')
     
     datasets = ['bbbp', 'clintox', 'tox21', 'hiv']
