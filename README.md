@@ -23,7 +23,7 @@ bold means important, stuff that people are working on contains names
 - [ ] check whether having multiple cls tokens is helpful
 - [ ] tweak the way the gradients are propagated through the cls token 
 - [ ] come up with a way to make the rnd2min pretraining converge to 0 loss
-- [ ] add a term to the pretraining objective that depends on the features  
+- [x] add a term to the pretraining objective that depends on the features  
 - [ ] a transformer decoder that has the hidden states of a GNN as memory
 #### random DFS code to minimal DFS code pretraining 
 - [x] Chris **write cluster ready pretraining script**
