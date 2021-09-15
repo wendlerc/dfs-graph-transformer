@@ -106,9 +106,9 @@ if __name__ == "__main__":
         run = wandb.init(args.wandb_mode, 
                  project=args.wandb_project, 
                  entity=args.wandb_entity, 
-                 name=args.name, config=config,
+                 name=args.name, config=config.to_dict(),
                  reinit=True)
-        wandb.config.dataset = dataset
+        wandb.config.update({'dataset': dataset}, allow_val_change=True)
         # 1. compute all feature vectors
         rep = 0
         trainset = pd.read_csv(t.data_dir_pattern%dataset+"%d/train.csv"%rep)

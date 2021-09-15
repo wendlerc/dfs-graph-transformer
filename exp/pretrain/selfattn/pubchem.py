@@ -35,7 +35,7 @@ if __name__ == "__main__":
     run = wandb.init(mode=args.wandb_mode, 
                      project=args.wandb_project, 
                      entity=args.wandb_entity, 
-                     name=args.name, config=config)
+                     name=args.name, config=config.to_dict())
     
     m = config.model
     t = config.training
