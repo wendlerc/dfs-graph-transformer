@@ -13,17 +13,18 @@ model:
     n_class_tokens: 1
     
 data:
-    n_files: 10
-    n_splits: 1
-    n_iter_per_split: 10000
-    #path: "/home/wendlerc/noH/timeout60_4/"
+    n_used: null # set this to 4 if you use the 10M and null otherwise 
+    n_iter_per_split: 1000 # the data is split in the preprocessing step into n shards,
+    # n_used determines how many of these shards to process at once and n_iter_per_split 
+    # determines how many passes to do over this split
     path: "./results/pubchem/noH/10K/"
     valid_path: "./results/pubchem/noH/validation/"
     batch_size: 50
     
 training:
+    mode: "rnd2min"
     lr: 0.0003
-    n_epochs: 10000
+    n_epochs: 1
     lr_adjustment_period: 500
     lr_patience: 5
     decay_factor: 0.8

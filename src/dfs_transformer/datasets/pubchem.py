@@ -6,6 +6,16 @@ import glob
 import torch
 import tqdm
 
+def get_n_files(path):
+    nums = []
+    for name in glob.glob('%s/*'%path):
+        try:
+            nums += [int(name.split('/')[-1])]
+        except ValueError:
+            continue
+    n_splits = max(nums)
+    return n_splits
+
 class PubChem(Dataset):
     """PubChem dataset of molecules and minimal DFS codes."""
     def __init__(self, path, n_used = None, n_splits = None, max_nodes=np.inf,
@@ -29,13 +39,7 @@ class PubChem(Dataset):
         self.smiles = []
         self.path = path
         if n_splits is None:
-            nums = []
-            for name in glob.glob('%s/*'%path):
-                try:
-                    nums += [int(name.split('/')[-1])]
-                except ValueError:
-                    continue
-            n_splits = max(nums)
+            n_splits = get_n_files(path)
         self.n_splits = n_splits
         if n_used is None:
             self.n_used = self.n_splits

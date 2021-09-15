@@ -8,6 +8,8 @@ Created on Tue Sep 14 10:54:35 2021
 
 import torch
 import torch.nn as nn
+import numpy as np
+import dfs_code
 
 def seq_loss(pred, target, m, ce=nn.CrossEntropyLoss(ignore_index=-1)):
     """
@@ -51,3 +53,58 @@ def seq_acc(pred, target, idx=0):
         n_tgts = torch.sum(mask)
         acc = (torch.argmax(prd[mask], axis=1) == tgt[mask]).sum()/n_tgts
         return acc
+
+
+def BERTize(codes, fraction_missing=0.15):
+    inputs = []
+    targets = []
+    for code in codes:
+        n = len(code)
+        perm = np.random.permutation(n)
+        target_idx = perm[:int(fraction_missing*n)]
+        input_idx = perm[int(fraction_missing*n):]
+        inp = code.clone()
+        target = code.clone()
+        target[input_idx] = -1
+        inp[target_idx] = -1
+        inputs += [inp]
+        targets += [target]
+    return inputs, targets
+
+
+def collate_BERT(dlist, mode="min2min", fraction_missing=0.1):
+        node_batch = [] 
+        edge_batch = []
+        min_code_batch = []
+        for d in dlist:
+            node_batch += [d.node_features]
+            edge_batch += [d.edge_features]
+            if mode == "min2min":
+                min_code_batch += [d.min_dfs_code]
+            elif mode == "rnd2rnd":
+                rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                         d.z.numpy().tolist(), 
+                                                                         np.argmax(d.edge_attr.numpy(), axis=1))
+                min_code_batch += [rnd_code]
+            else:
+                raise ValueError("unknown config.training.mode %s"%mode)
+        inputs, outputs = BERTize(min_code_batch, fraction_missing=fraction_missing)
+        targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1)
+        return inputs, node_batch, edge_batch, targets 
+    
+    
+def collate_rnd2min(dlist):
+        node_batch = [] 
+        edge_batch = []
+        min_code_batch = []
+        rnd_code_batch = []
+        for d in dlist:
+            node_batch += [d.node_features]
+            edge_batch += [d.edge_features]
+            min_code_batch += [d.min_dfs_code]
+            rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                     d.z.numpy().tolist(), 
+                                                                     np.argmax(d.edge_attr.numpy(), axis=1))
+            rnd_code_batch += [torch.tensor(rnd_code)]
+        targets = nn.utils.rnn.pad_sequence(min_code_batch, padding_value=-1)
+        return rnd_code_batch, node_batch, edge_batch, targets 
