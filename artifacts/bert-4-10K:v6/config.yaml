@@ -1,0 +1,36 @@
+data:
+  batch_size: 50
+  n_iter_per_split: 10
+  n_used: null
+  path: ./results/pubchem/noH/10K/
+  valid_path: ./results/pubchem/noH/validation/
+model:
+  dim_feedforward: 2048
+  emb_dim: 120
+  max_edges: 500
+  max_nodes: 250
+  missing_value: -1
+  n_atoms: 118
+  n_bonds: 5
+  n_class_tokens: 4
+  n_edge_features: 14
+  n_node_features: 133
+  nhead: 12
+  nlayers: 6
+training:
+  accumulate_grads: 2
+  batch_size: 50
+  decay_factor: 0.8
+  es_improvement: 0.0
+  es_path: null
+  es_patience: 100
+  fraction_missing: 0.15
+  gpu_id: 0
+  load_last: true
+  lr: 3.0e-05
+  lr_adjustment_period: 500
+  lr_patience: 5
+  minimal_lr: 6.0e-08
+  mode: min2min
+  n_epochs: 1
+  pretrained_dir: null

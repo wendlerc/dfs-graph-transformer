@@ -16,8 +16,9 @@ es_patience: 10
 es_improvement: 0.0
 pretrained_project: 'pubchem-bert'
 pretrained_entity: 'chrisxx'
-pretrained_model: 'rnd2min-4-10M'
+pretrained_model: 'rnd2min-10M'
 pretrained_yaml: './config/selfattn/rnd2min.yaml' 
+use_local_yaml: True
 pretrained_dir: null
 es_path: null
 load_last: True

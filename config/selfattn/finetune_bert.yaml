@@ -14,10 +14,11 @@ accumulate_grads: 2
 gpu_id: 0
 es_patience: 10
 es_improvement: 0.0
-pretrained_project: 'pubchem-bert'
-pretrained_entity: 'chrisxx'
+pretrained_project: 'pubchem'
+pretrained_entity: 'dfstransformer'
 pretrained_model: 'bert-4-10M'
 pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
+use_local_yaml: False
 pretrained_dir: null
 es_path: null
 load_last: True

@@ -35,23 +35,14 @@ def load_selfattn(t, device):
         model_dir = t.pretrained_dir
         
     model_yaml = model_dir+"/config.yaml"
-    if not os.path.isfile(model_yaml):
+    if not os.path.isfile(model_yaml) or t.use_local_yaml:
         model_yaml = t.pretrained_yaml
     
     with open(model_yaml) as file:
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     m = config.model
         
-    model = DFSCodeSeq2SeqFC(nn.Linear(m.n_node_features, m.emb_dim),
-                         nn.Linear(m.n_edge_features, m.emb_dim),
-                         n_atoms=m.n_atoms,
-                         n_bonds=m.n_bonds, 
-                         emb_dim=m.emb_dim, 
-                         nhead=m.nhead, 
-                         nlayers=m.nlayers, 
-                         max_nodes=m.max_nodes, 
-                         max_edges=m.max_edges,
-                         missing_value=m.missing_value)
+    model = DFSCodeSeq2SeqFC(**m)
     if model_dir is not None:
         model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
         
@@ -89,8 +80,11 @@ if __name__ == "__main__":
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
     for key,value in args.overwrite.items():
-        for key1,value1 in value.items():
-            config[key][key1] = value1
+        if type(value) is dict:
+            for key1,value1 in value.items():
+                config[key][key1] = value1
+        else:
+            config[key] = value
     
     t = config
     print(t)
