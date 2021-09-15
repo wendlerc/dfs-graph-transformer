@@ -1,0 +1,54 @@
+model:
+    n_atoms: 118
+    n_bonds: 5
+    emb_dim: 120
+    nhead: 12
+    nlayers: 6
+    max_nodes: 250
+    max_edges: 500
+    dim_feedforward: 2048
+    missing_value: -1
+    n_node_features: 133
+    n_edge_features: 14
+    n_class_tokens: 4 
+     
+data:
+    n_used: null # set this to 4 if you use the 10M and null otherwise 
+    n_iter_per_split: 1000 # the data is split in the preprocessing step into n shards,
+    # n_used determines how many of these shards to process at once and n_iter_per_split 
+    # determines how many passes to do over this split
+    path: "./results/pubchem/noH/10K/"
+    valid_path: "./results/pubchem/noH/validation/"
+    batch_size: 50
+    
+training:
+    mode: min2min
+    fraction_missing: 0.15
+    lr: 0.00003
+    n_epochs: 1
+    lr_adjustment_period: 500
+    lr_patience: 5
+    decay_factor: 0.8
+    minimal_lr: 0.00000006
+    batch_size: 50
+    accumulate_grads: 2
+    gpu_id: 0
+    es_patience: 10
+    es_improvement: 0.0
+    pretrained_dir: null
+    es_path: null
+    load_last: False
+    
+
+    
+    
+    
+    
+    
+
+    
+    
+
+
+
+
