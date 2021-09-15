@@ -111,6 +111,7 @@ if __name__ == "__main__":
     trainer.n_epochs = d.n_iter_per_split
     
     for epoch in range(t.n_epochs):
+        print('starting epoch %d'%(epoch+1))
         for split in range(d.n_splits):
             n_ids = d.n_files//d.n_splits
             dataset = PubChem(d.path, n_used = n_ids, max_nodes=m.max_nodes, 
