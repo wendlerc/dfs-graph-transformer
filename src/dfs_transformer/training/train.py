@@ -43,7 +43,7 @@ class Trainer():
         self.es_improvement = es_improvement
         self.es_patience = es_patience
         if es_path is None:
-            self.es_path = "./model/tmp/%d/"%np.random.randint(100000)
+            self.es_path = "./models/tmp/%d/"%np.random.randint(100000)
         else:
             self.es_path = es_path
         self.wandb = wandb_run 
