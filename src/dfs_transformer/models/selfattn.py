@@ -126,21 +126,22 @@ class DFSCodeSeq2SeqFC(nn.Module):
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
     def encode(self, C, N, E, method="cls"):
+        ncls = self.n_class_tokens
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
         if method == "cls":
-            features = self_attn[0]
+            features = self_attn[:ncls]
         elif method == "sum":
-            features = torch.sum(self_attn[1:], dim=0)
+            features = torch.sum(self_attn[ncls:], dim=0)
         elif method == "mean":
-            features = torch.mean(self_attn[1:], dim=0)
+            features = torch.mean(self_attn[ncls:], dim=0)
         elif method == "max":
-            features = torch.max(self_attn[1:], dim=0)[0]
+            features = torch.max(self_attn[ncls:], dim=0)[0]
         elif method == "cls-mean-max":
             fcls = self_attn[0]
-            fmean = torch.mean(self_attn[1:], dim=0)
-            fmax = torch.max(self_attn[1:], dim=0)[0]
+            fmean = torch.mean(self_attn[ncls:], dim=0)
+            fmax = torch.max(self_attn[ncls:], dim=0)[0]
             features = torch.cat((fcls, fmean, fmax), axis=1)
         else:
             raise ValueError("unsupported method")
-        return features
+        return features.view(self_attn.shape[1], -1)
 

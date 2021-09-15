@@ -91,6 +91,7 @@ if __name__ == "__main__":
     trainer.n_epochs = d.n_iter_per_split
     
     for epoch in range(t.n_epochs):
+        print('starting epoch %d'%(epoch+1))
         for split in range(d.n_splits):
             n_ids = d.n_files//d.n_splits
             dataset = PubChem(d.path, n_used = n_ids, max_nodes=m.max_nodes, 
@@ -103,6 +104,10 @@ if __name__ == "__main__":
                 break
         if trainer.stop_training:
             break
+        
+    #store config and model
+    with open(trainer.es_path+'config.yaml', 'w') as f:
+        yaml.dump(config.to_dict(), f, default_flow_style=False)
     trained_model_artifact = wandb.Artifact(args.name, type="model", description="trained selfattn model")
     trained_model_artifact.add_dir(trainer.es_path)
     run.log_artifact(trained_model_artifact)

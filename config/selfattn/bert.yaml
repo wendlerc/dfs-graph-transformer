@@ -43,7 +43,8 @@ finetune:
     data_dir_pattern: "./datasets/mymoleculenet/%s/"
     load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
     model_dir_pattern: "./models/%s/"
-    lr: 0.000003
+    lr: 0.003
+    #lr: 0.000003
     weight_decay: 0.1
     clip_gradient: 0.5
     n_epochs: 25
@@ -57,7 +58,7 @@ finetune:
     es_improvement: 0.0
     pretrained_project: 'pubchem-bert'
     pretrained_entity: 'chrisxx'
-    pretrained_model: 'bert-100K'
+    pretrained_model: 'bert-4-10M'
     es_path: null
     load_last: True
     use_min: True
