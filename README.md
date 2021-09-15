@@ -1,10 +1,16 @@
 # TODO: 
 bold means important, stuff that people are working on contains names
+
+### Show that the new representation can solve an actual problem
+- [ ] show that there are advantages of using DFS codes over smiles 
+- [ ] show that DFS codes can capture stereochemical properties 
+- [ ] show that DFS codes work well on other types of graphs (ogb-mag seems to be a good fit)
+
 ### Evaluate the following baselines on our moleculenet splits
 - [x] DMPNN
 - [ ] Hugo **GROVER**, [git](https://github.com/tencent-ailab/grover) [paper](https://arxiv.org/abs/2007.02835)
 - [ ] Hugo **ChemBERTa**, [git](https://github.com/seyonechithrananda/bert-loves-chemistry) [paper](https://arxiv.org/abs/2010.09885) [huggingface](https://huggingface.co/seyonec/ChemBERTa-zinc-base-v1)
-- [ ] Hugo SMILES transformer, [git](https://github.com/DSPsleeporg/smiles-transformer) [paper](https://arxiv.org/abs/1911.04738)
+- [x] Hugo SMILES transformer, [git](https://github.com/DSPsleeporg/smiles-transformer) [paper](https://arxiv.org/abs/1911.04738)
 - [ ] **SchNet** or a successor, [git](https://github.com/atomistic-machine-learning/schnetpack)
 - [ ] N-GRAM, see Table 1 in [GROVER paper](https://arxiv.org/abs/2007.02835)
 
@@ -20,7 +26,7 @@ bold means important, stuff that people are working on contains names
 - [ ] add a term to the pretraining objective that depends on the features  
 - [ ] a transformer decoder that has the hidden states of a GNN as memory
 #### random DFS code to minimal DFS code pretraining 
-- [ ] Chris **write cluster ready pretraining script**
+- [x] Chris **write cluster ready pretraining script**
 - [ ] Chris **write cluster ready finetuning script** 
 - [ ] **find good hyperparameters**  
 - [ ] investigate the behavior when the pretraining dataset size is increased
