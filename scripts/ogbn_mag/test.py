@@ -1,6 +1,5 @@
 import dfs_code
 import pickle
-import torch
 import tqdm
 import numpy as np
 import func_timeout
@@ -34,10 +33,11 @@ def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_
         if idx % total != nr:
             continue
         with open(fname, "rb") as f:
-            ddict = pickle.load(f)
+            ddict = pickle.load(fname)
         for i, d in tqdm.tqdm(ddict.items()):
             try:
                 d = ConfigDict(d)
+                d.edge_index = torch.tensor(d.edge_index)
                 time1 = time.time()
                 code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                              d.node_labels.tolist(), 
@@ -49,12 +49,13 @@ def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_
                 exp.log_scalar('time %d'%i, time2-time1)
                 ddict[i] = d.to_dict()
             except:
-                logging.warning('%d failed with %s'%(i, sys.exc_info()))
+                logging.warning('%d failed'%i)
                 exp.log_scalar('%d failed with'%i, sys.exc_info()[0])
                 continue
         with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
             with open(f.name, 'wb') as ff:
                 pickle.dump(ddict, ff)
             _run.add_artifact(f.name, 'dfs_data_split%d.pkl'%nr)
+    return ddict
         
 
