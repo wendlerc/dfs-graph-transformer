@@ -211,7 +211,15 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
             fcls = self_attn[0]
             fmean = torch.mean(self_attn[ncls:], dim=0)
             fmax = torch.max(self_attn[ncls:], dim=0)[0]
-            features = torch.cat((fcls, fmean, fmax), axis=1)
+            features = torch.cat((fcls, fmean, fmax), dim=1)
+        elif method == "max-of-cls":
+            features = torch.max(self_attn[:ncls], dim=0)[0]
+        elif method == "mean-of-cls":
+            features = torch.mean(self_attn[:ncls], dim=0)
+        elif method == "max-mean-of-cls":
+            features = torch.cat((torch.max(self_attn[:ncls], dim=0)[0], torch.mean(self_attn[:ncls], dim=0)), dim=1)
+        elif int(method) < ncls:
+            features = self_attn[int(method)]
         else:
             raise ValueError("unsupported method")
         return features.view(self_attn.shape[1], -1)

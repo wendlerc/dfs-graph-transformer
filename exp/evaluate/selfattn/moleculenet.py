@@ -14,7 +14,8 @@ import pandas as pd
 import sys
 from sklearn.metrics import roc_auc_score, average_precision_score
 sys.path = ['./src'] + sys.path
-from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_smiles_minc_rndc_features_y
+from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_smiles_minc_rndc_features_y, \
+DFSCodeSeq2SeqFCFeatures
 import argparse
 import yaml
 from ml_collections import ConfigDict
@@ -42,7 +43,7 @@ def load_selfattn(t, device):
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     m = config.model
         
-    model = DFSCodeSeq2SeqFC(**m)
+    model = eval(t.pretrained_class)(**m)
     if model_dir is not None:
         model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
         
