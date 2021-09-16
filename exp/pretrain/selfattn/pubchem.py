@@ -60,9 +60,9 @@ if __name__ == "__main__":
     model = DFSCodeSeq2SeqFC(**m)
     
     if t.load_last and t.es_path is not None:
-        model.load_state_dict(torch.load(t.es_path, map_location=device))
+        model.load_state_dict(torch.load(t.es_path+'checkpoint.pt', map_location=device))
     elif t.pretrained_dir is not None:
-        model.load_state_dict(torch.load(t.pretrained_dir, map_location=device))
+        model.load_state_dict(torch.load(t.pretrained_dir+'checkpoint.pt', map_location=device))
     
     validloader = None
     if d.valid_path is not None:
