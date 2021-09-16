@@ -135,7 +135,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
         ncls = self.n_class_tokens
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
         if method == "cls":
-            features = self_attn[:ncls]
+            features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
         elif method == "sum":
             features = torch.sum(self_attn[ncls:], dim=0)
         elif method == "mean":
@@ -149,7 +149,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
             features = torch.cat((fcls, fmean, fmax), axis=1)
         else:
             raise ValueError("unsupported method")
-        return features.view(self_attn.shape[1], -1)
+        return features.view(self_attn.shape[1], -1) # this can shuffle the features of different examples.
     
     
 class DFSCodeSeq2SeqFCFeatures(nn.Module):
@@ -200,7 +200,7 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
         ncls = self.n_class_tokens
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
         if method == "cls":
-            features = self_attn[:ncls]
+            features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
         elif method == "sum":
             features = torch.sum(self_attn[ncls:], dim=0)
         elif method == "mean":
@@ -212,6 +212,11 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
             fmean = torch.mean(self_attn[ncls:], dim=0)
             fmax = torch.max(self_attn[ncls:], dim=0)[0]
             features = torch.cat((fcls, fmean, fmax), dim=1)
+        elif method == "min-mean-max":
+            fmin = torch.min(self_attn, dim=0)[0]
+            fmean = torch.mean(self_attn, dim=0)
+            fmax = torch.max(self_attn, dim=0)[0]
+            features = torch.cat((fmin, fmean, fmax), dim=1)
         elif method == "max-of-cls":
             features = torch.max(self_attn[:ncls], dim=0)[0]
         elif method == "mean-of-cls":
