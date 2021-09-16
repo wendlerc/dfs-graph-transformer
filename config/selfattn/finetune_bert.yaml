@@ -14,6 +14,7 @@ accumulate_grads: 2
 gpu_id: 0
 es_patience: 10
 es_improvement: 0.0
+n_frozen: 5
 pretrained_class: 'DFSCodeSeq2SeqFCFeatures'
 pretrained_project: 'pubchem-experimental'
 pretrained_entity: 'chrisxx'
