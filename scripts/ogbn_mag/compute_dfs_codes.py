@@ -19,7 +19,7 @@ import networkx as nx
 from networkx.generators.ego import ego_graph
 from ml_collections import ConfigDict
 
-def ego2data(idx, ego):
+def ego2data(idx, ego, node_types, edge_type_dict, graph):
     d = {}
     d['idx'] = idx
     i2i = {iold: inew for inew, iold in enumerate(ego.nodes)}
@@ -45,13 +45,11 @@ def cfg(_log):
     max_edges = np.inf
     time_limit = 60
     log_level = logging.INFO
-    use_Hs = False
-    add_loops = False
     start_idx = 0
     max_lines = np.inf#100000
 
 @exp.automain
-def main(nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, start_idx, max_lines, _run, _log):
+def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_lines, _run, _log):
     logging.basicConfig(level=log_level)
     
     dataset = PygNodePropPredDataset(name = "ogbn-mag") 
@@ -105,7 +103,7 @@ def main(nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loo
         if idx % total == nr:
             try:
                 time1 = time.time()
-                d = ego2data(idx, ego_graph(g, idx, radius=1))
+                d = ego2data(idx, ego_graph(g, idx, radius=1), node_types, edge_type_dict, graph)
                 code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                              d['node_labels'].tolist(), 
                                                                              d['edge_labels'].tolist(),
