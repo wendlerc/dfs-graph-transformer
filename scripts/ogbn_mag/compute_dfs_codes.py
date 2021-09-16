@@ -28,7 +28,7 @@ def ego2data(idx, ego, node_types, edge_type_dict, graph):
     for e in ego.edges:
         edges += [[i2i[e[0]], i2i[e[1]]], [i2i[e[1]], i2i[e[0]]]]
         elabels += 2*[edge_type_dict[tuple(e)]]
-    d['edge_index'] = np.asarray(edges) 
+    d['edge_index'] = torch.tensor(np.asarray(edges)).T
     d['node_labels'] = node_types[np.asarray(ego.nodes)]
     d['edge_labels'] = np.asarray(elabels)
     d['graph_features'] = graph['x_dict']['paper'][idx].numpy()
@@ -92,7 +92,6 @@ def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_
     g.add_edges_from(edges)
     
     
-    dfs_codes = {}
     d_dict = {}
     
     for idx in tqdm.tqdm(nodes[node_types == 0]):
@@ -107,20 +106,16 @@ def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_
                 code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                              d['node_labels'].tolist(), 
                                                                              d['edge_labels'].tolist(),
-                                                                             timeout=time_limit)    
+                                                                             timeout=time_limit)
+                d.min_dfs_code = code
+                d.dfs_index = dfs_index
                 time2 = time.time()
                 exp.log_scalar('time %d'%idx, time2-time1)
-                dfs_codes[idx] = {'min_dfs_code':code, 'dfs_index':dfs_index}
                 d_dict[idx] = d.to_dict()
             except:
                 logging.warning('%d failed'%idx)
                 exp.log_scalar('%d failed with'%idx, sys.exc_info()[0])
                 continue
-        
-    with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
-        with open(f.name, 'wb') as ff:
-            pickle.dump(dfs_codes, ff)
-        _run.add_artifact(f.name, 'min_dfs_codes_split%d.pkl'%(nr))
     
     with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
         with open(f.name, 'wb') as ff:
