@@ -1,8 +1,8 @@
 data_dir_pattern: "./datasets/mymoleculenet/%s/"
 load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
 model_dir_pattern: "./models/%s/"
-lr: 0.003
-#lr: 0.000003
+lr_head: 0.003
+lr_pretrained: 0.000003
 weight_decay: 0.1
 clip_gradient: 0.5
 n_epochs: 25
