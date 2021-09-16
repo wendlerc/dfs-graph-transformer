@@ -84,6 +84,9 @@ if __name__ == "__main__":
     
     with open(args.yaml) as file:
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
+           
+    config.n_hidden = args.n_hidden
+    config.dataset = args.dataset
     
     for key,value in args.overwrite.items():
         if type(value) is dict:
@@ -91,9 +94,6 @@ if __name__ == "__main__":
                 config[key][key1] = value1
         else:
             config[key] = value
-            
-    config.n_hidden = args.n_hidden
-    config.dataset = args.dataset
     t = config
     print(t)
 
@@ -196,7 +196,7 @@ if __name__ == "__main__":
         testloader = DataLoader(testdata, batch_size=t.batch_size, shuffle=False, pin_memory=t.use_min, collate_fn=collate_fn)
         
         optim = optimizers.Adam(model_head.parameters(), lr = t.lr_head)
-        optim.add_param_group({"params": model.parameters(), "lr": t.lr_pretrained})
+        
         lr_scheduler = optimizers.lr_scheduler.ReduceLROnPlateau(optim, mode='min', verbose=True, patience=t.lr_patience, factor=t.decay_factor)
         early_stopping_model = EarlyStopping(patience=t.es_patience, delta=t.es_improvement,
                                       path=model_dir+'checkpoint_model.pt')
@@ -207,8 +207,11 @@ if __name__ == "__main__":
         
         valid_scores = []
         for epoch in range(t.n_epochs):  
+            if epoch == t.n_frozen:
+                optim.add_param_group({"params": model.parameters(), "lr": t.lr_pretrained})
             epoch_loss = 0
             pbar = tqdm.tqdm(trainloader)
+            model.train()
             for i, data in enumerate(pbar):
                 if i % t.accumulate_grads == 0: 
                     optim.zero_grad()
@@ -217,19 +220,19 @@ if __name__ == "__main__":
                 features = model.encode(to_cuda(code), to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
                 prediction = model_head(features.to(device))
                 loss = bce(prediction, y.to(device))
-                if t.weight_decay is not None:
+                if t.weight_decay > 0:
                     w_curr = nn.utils.parameters_to_vector(model.parameters())
                     loss += 0.5*t.weight_decay*torch.sum((w_init - w_curr)**2)
                 loss.backward()
                 
                 if (i + 1) % t.accumulate_grads == 0: 
-                    if t.clip_gradient is not None:
+                    if t.clip_gradient > 0:
                         nn.utils.clip_grad_norm_(model.parameters(), t.clip_gradient)
                     optim.step()
                 epoch_loss = (epoch_loss*i + loss.item())/(i+1)
                 pbar.set_description('Epoch %d: CE %2.6f'%(epoch+1, epoch_loss))
                 #run.log({'batch-loss':loss, 'loss':epoch_loss})
-                
+            model.eval()
             roc_auc_valid, prc_auc_valid = score(validloader, model, model_head) 
             valid_scores += [roc_auc_valid]
             lr_scheduler.step(epoch_loss)
@@ -249,7 +252,7 @@ if __name__ == "__main__":
         # test set
         model.load_state_dict(torch.load(model_dir+'checkpoint_model.pt'))
         model_head.load_state_dict(torch.load(model_dir+'checkpoint_head.pt'))
-        
+        model.eval()
         roc_auc_valid, prc_auc_valid = score(testloader, model, model_head) 
         wandb.log({'roc_test':roc_auc_valid, 'prc_test':prc_auc_valid}, step=t.n_epochs*(rep+1))
         roc_avgs += [roc_auc_valid]
