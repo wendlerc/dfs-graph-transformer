@@ -47,9 +47,10 @@ def cfg(_log):
     log_level = logging.INFO
     start_idx = 0
     max_lines = np.inf#100000
+    compute_min_dfs = False
 
 @exp.automain
-def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_lines, _run, _log):
+def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_lines, compute_min_dfs, _run, _log):
     logging.basicConfig(level=log_level)
     
     dataset = PygNodePropPredDataset(name = "ogbn-mag") 
@@ -103,12 +104,13 @@ def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_
             try:
                 time1 = time.time()
                 d = ego2data(idx, ego_graph(g, idx, radius=1), node_types, edge_type_dict, graph)
-                code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
-                                                                             d['node_labels'].tolist(), 
-                                                                             d['edge_labels'].tolist(),
-                                                                             timeout=time_limit)
-                d.min_dfs_code = code
-                d.dfs_index = dfs_index
+                if compute_min_dfs:
+                    code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
+                                                                                 d['node_labels'].tolist(), 
+                                                                                 d['edge_labels'].tolist(),
+                                                                                 timeout=time_limit)
+                    d.min_dfs_code = code
+                    d.dfs_index = dfs_index
                 time2 = time.time()
                 exp.log_scalar('time %d'%idx, time2-time1)
                 d_dict[idx] = d.to_dict()
