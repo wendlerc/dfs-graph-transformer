@@ -188,8 +188,8 @@ if __name__ == "__main__":
         valid_X, valid_y = validset["smiles"].to_numpy(), validset["target"].to_numpy()
         test_X, test_y = testset["smiles"].to_numpy(), testset["target"].to_numpy()
         traindata = Deepchem2TorchGeometric(train_X, train_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
-        validdata = Deepchem2TorchGeometric(train_X, train_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
-        testdata = Deepchem2TorchGeometric(train_X, train_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
+        validdata = Deepchem2TorchGeometric(valid_X, valid_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
+        testdata = Deepchem2TorchGeometric(test_X, test_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
 
         trainloader = DataLoader(traindata, batch_size=t.batch_size, shuffle=True, pin_memory=t.use_min, collate_fn=collate_fn)
         validloader = DataLoader(validdata, batch_size=t.batch_size, shuffle=False, pin_memory=t.use_min, collate_fn=collate_fn)
