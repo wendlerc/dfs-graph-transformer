@@ -52,9 +52,8 @@ def main(nr, total, max_nodes, max_edges, time_limit, log_level, start_idx, max_
                 logging.warning('%d failed with %s'%(i, sys.exc_info()))
                 exp.log_scalar('%d failed with'%i, sys.exc_info()[0])
                 continue
-        with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
-            with open(f.name, 'wb') as ff:
-                pickle.dump(ddict, ff)
-            _run.add_artifact(f.name, 'dfs_data_split%d.pkl'%nr)
+        with open(fname+"%ds.pkl"%time_limit, 'wb') as ff:
+            pickle.dump(ddict, ff)
+         
         
 
