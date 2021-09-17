@@ -45,6 +45,15 @@ class FeaturesDataset(Dataset):
         features, label = self.data[idx]
         return features, label
 
+def get_n_files(path):
+    nums = []
+    for name in glob.glob('%s/*'%path):
+        try:
+            nums += [int(name.split('/')[-1])]
+        except ValueError:
+            continue
+    n_splits = max(nums)
+    return n_splits
     
 def collate_minc_rndc_y(dlist):
     z_batch = []

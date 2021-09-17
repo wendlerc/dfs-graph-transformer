@@ -5,16 +5,8 @@ from torch_geometric.data import Data
 import glob
 import torch
 import tqdm
+from .utils import get_n_files
 
-def get_n_files(path):
-    nums = []
-    for name in glob.glob('%s/*'%path):
-        try:
-            nums += [int(name.split('/')[-1])]
-        except ValueError:
-            continue
-    n_splits = max(nums)
-    return n_splits
 
 class PubChem(Dataset):
     """PubChem dataset of molecules and minimal DFS codes."""
