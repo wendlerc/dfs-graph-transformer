@@ -36,13 +36,12 @@ class OgbnMag(Dataset):
         
         for idx, d in tqdm.tqdm(d_all.items()):
             if self.indices is None or idx in self.indices:
+                if len(d.node_labels) > self.max_nodes:
+                    continue
+                if len(d.edge_labels) > 2*self.max_edges:
+                    continue
                 if self.require_min_dfs_code:
                     if "min_dfs_code" in d and d.min_dfs_code is not None and len(d.min_dfs_code) > 1:
-                        if len(d.node_labels) > self.max_nodes:
-                            continue
-                        if len(d.edge_labels) > 2*self.max_edges:
-                            continue
-                                        
                         data_ = Data(idx=idx,
                                      edge_index = d.edge_index,
                                      node_labels = torch.tensor(d.node_labels),
