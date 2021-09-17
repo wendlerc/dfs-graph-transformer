@@ -1,8 +1,8 @@
 data_dir_pattern: "./datasets/mymoleculenet/%s/"
 load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
 model_dir_pattern: "./models/%s/"
-lr: 0.003
-#lr: 0.000003
+lr_head: 0.003
+lr_pretrained: 0.000003
 weight_decay: 0.1
 clip_gradient: 0.5
 n_epochs: 25
@@ -14,9 +14,11 @@ accumulate_grads: 2
 gpu_id: 0
 es_patience: 10
 es_improvement: 0.0
-pretrained_project: 'pubchem'
-pretrained_entity: 'dfstransformer'
-pretrained_model: 'bert-4-10M'
+n_frozen: 5
+pretrained_class: 'DFSCodeSeq2SeqFCFeatures'
+pretrained_project: 'pubchem-experimental'
+pretrained_entity: 'chrisxx'
+pretrained_model: 'fbert-10M'
 pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
 use_local_yaml: False
 pretrained_dir: null

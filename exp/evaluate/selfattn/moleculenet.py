@@ -14,7 +14,8 @@ import pandas as pd
 import sys
 from sklearn.metrics import roc_auc_score, average_precision_score
 sys.path = ['./src'] + sys.path
-from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_smiles_minc_rndc_features_y
+from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_smiles_minc_rndc_features_y, \
+DFSCodeSeq2SeqFCFeatures
 import argparse
 import yaml
 from ml_collections import ConfigDict
@@ -42,7 +43,7 @@ def load_selfattn(t, device):
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     m = config.model
         
-    model = DFSCodeSeq2SeqFC(**m)
+    model = eval(t.pretrained_class)(**m)
     if model_dir is not None:
         model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
         
@@ -73,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--yaml', type=str, default="./config/selfattn/finetune_bert.yaml") 
     parser.add_argument('--name', type=str, default=None)
+    parser.add_argument('--n_hidden', type=int, default=0)
     parser.add_argument('--overwrite', type=json.loads, default="{}")
     args = parser.parse_args()
     
@@ -85,7 +87,8 @@ if __name__ == "__main__":
                 config[key][key1] = value1
         else:
             config[key] = value
-    
+            
+    config.n_hidden = args.n_hidden
     t = config
     print(t)
 
@@ -142,7 +145,16 @@ if __name__ == "__main__":
         roc_avgs = []
         prc_avgs = []
         for rep in range(10):
-            model_head = nn.Linear(features.shape[1], 1)
+            if t.n_hidden > 0:
+                layers = []
+                input_dim = features.shape[1]
+                for j in range(t.n_hidden):
+                    layers += [nn.Linear(input_dim, input_dim//2), nn.ReLU(inplace=True)]
+                    input_dim = input_dim // 2
+                layers += [nn.Linear(input_dim, 1)]
+                model_head = nn.Sequential(*layers)
+            else:
+                model_head = nn.Linear(features.shape[1], 1)
             model_head.to(device)
                
             trainset = pd.read_csv(t.data_dir_pattern%dataset+"%d/train.csv"%rep)
@@ -161,7 +173,7 @@ if __name__ == "__main__":
             
             params = list(model_head.parameters())
             
-            optim = optimizers.Adam(params, lr=t.lr)
+            optim = optimizers.Adam(params, lr=t.lr_head)
             lr_scheduler = optimizers.lr_scheduler.ReduceLROnPlateau(optim, mode='min', verbose=True, patience=t.lr_patience, factor=t.decay_factor)
             early_stopping_head = EarlyStopping(patience=t.es_patience, delta=t.es_improvement,
                                           path=model_dir+'checkpoint_head.pt')

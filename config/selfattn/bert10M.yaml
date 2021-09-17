@@ -17,8 +17,8 @@ data:
     n_iter_per_split: 1 # the data is split in the preprocessing step into n shards,
     # n_used determines how many of these shards to process at once and n_iter_per_split 
     # determines how many passes to do over this split
-    path: "./results/pubchem/noH/10M/"
-    valid_path: "./results/pubchem/noH/validation/"
+    path: "/home/wendlerc/noH/10M/"
+    valid_path: "/home/wendlerc/noH/validation/"
     batch_size: 50
     
 training:
@@ -32,11 +32,11 @@ training:
     minimal_lr: 0.00000006
     batch_size: 50
     accumulate_grads: 2
-    gpu_id: 0
+    gpu_id: 1
     es_patience: 10
     es_improvement: 0.0
     pretrained_dir: null
-    es_path: null
+    es_path: "/home/wendlerc/2021/graph-transformer/models/pubchem/10M/fbert/"
     load_last: False
     
 

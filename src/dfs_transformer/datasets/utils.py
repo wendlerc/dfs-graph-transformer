@@ -81,6 +81,7 @@ def collate_minc_rndc_features_y(dlist):
         y_batch += [d.y]
     return rnd_code_batch, min_code_batch, node_batch, edge_batch, torch.cat(y_batch)
 
+
 def collate_smiles_minc_rndc_features_y(dlist):
     node_batch = []
     y_batch = []
