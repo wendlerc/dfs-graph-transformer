@@ -10,20 +10,20 @@ model:
     missing_value: -1
     n_node_features: 133
     n_edge_features: 14
-    n_class_tokens: 4 
+    n_class_tokens: 1 
      
 data:
     n_used: null # set this to 4 if you use the 10M and null otherwise 
     n_iter_per_split: 100 # the data is split in the preprocessing step into n shards,
     # n_used determines how many of these shards to process at once and n_iter_per_split 
     # determines how many passes to do over this split
-    path: "./results/pubchem/noH/100K/"
-    valid_path: "./results/pubchem/noH/validation/"
+    path: "/home/chrisw/Documents/projects/2021/graph-transformer/results/pubchem/noH/100K/"
+    valid_path: "/home/chrisw/Documents/projects/2021/graph-transformer/results/pubchem/noH/validation/"
     batch_size: 50
     
 training:
     mode: min2min
-    fraction_missing: 0.15
+    fraction_missing: 0.30
     lr: 0.00003
     n_epochs: 1
     lr_adjustment_period: 500
@@ -35,9 +35,9 @@ training:
     gpu_id: 0
     es_patience: 10
     es_improvement: 0.0
-    pretrained_dir: null
-    es_path: null
-    load_last: False
+    pretrained_dir: "/home/chrisw/Documents/projects/2021/graph-transformer/models/tmp/53965/"
+    es_path: "/home/chrisw/Documents/projects/2021/graph-transformer/models/tmp/53965/"
+    load_last: True
     
 
     

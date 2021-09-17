@@ -10,7 +10,7 @@ model:
     missing_value: -1
     n_node_features: 133
     n_edge_features: 14
-    n_class_tokens: 4 
+    n_class_tokens: 1 
      
 data:
     n_used: 4 # set this to 4 if you use the 10M and null otherwise 

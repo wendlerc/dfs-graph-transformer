@@ -10,10 +10,10 @@ model:
     missing_value: null
     n_node_features: 133
     n_edge_features: 14
-    n_class_tokens: 4 
+    n_class_tokens: 1 
      
 data:
-    n_used: null # set this to 4 if you use the 10M and null otherwise 
+    n_used: 4 # set this to 4 if you use the 10M and null otherwise 
     n_iter_per_split: 1 # the data is split in the preprocessing step into n shards,
     # n_used determines how many of these shards to process at once and n_iter_per_split 
     # determines how many passes to do over this split
