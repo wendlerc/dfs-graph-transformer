@@ -27,7 +27,7 @@ class OgbnMag(Dataset):
         
     def prepare(self):
         d_all = {}
-        for i in tqdm.tqdm(range(1)):#:self.n_splits)):
+        for i in tqdm.tqdm(range(self.n_splits)):
             dname = glob.glob(self.path+"/%d/"%(i+1) + self.pattern%i)[0]
             with open(dname, 'rb') as f:
                 d = pickle.load(f)
