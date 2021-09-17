@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 import math
 from .utils import PositionalEncoding
+from einops import rearrange
 
 class DFSCodeEncoder(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 
@@ -135,7 +136,9 @@ class DFSCodeSeq2SeqFC(nn.Module):
         ncls = self.n_class_tokens
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
         if method == "cls":
-            features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
+            #features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
+            features = self_attn[:ncls]
+            features = rearrange(features, 'd0 d1 d2 -> d1 (d0 d2)')
         elif method == "sum":
             features = torch.sum(self_attn[ncls:], dim=0)
         elif method == "mean":
@@ -200,7 +203,9 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
         ncls = self.n_class_tokens
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
         if method == "cls":
-            features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
+            #features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
+            features = self_attn[:ncls]
+            features = rearrange(features, 'd0 d1 d2 -> d1 (d0 d2)')
         elif method == "sum":
             features = torch.sum(self_attn[ncls:], dim=0)
         elif method == "mean":

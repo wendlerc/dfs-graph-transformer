@@ -209,6 +209,7 @@ if __name__ == "__main__":
         for epoch in range(t.n_epochs):  
             if epoch == t.n_frozen:
                 optim.add_param_group({"params": model.parameters(), "lr": t.lr_pretrained})
+                lr_scheduler = optimizers.lr_scheduler.ReduceLROnPlateau(optim, mode='min', verbose=True, patience=t.lr_patience, factor=t.decay_factor)
             epoch_loss = 0
             pbar = tqdm.tqdm(trainloader)
             model.train()
