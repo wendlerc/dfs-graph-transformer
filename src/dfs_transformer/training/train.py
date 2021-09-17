@@ -39,7 +39,10 @@ class Trainer():
         self.decay_factor = decay_factor
         self.minimal_lr = minimal_lr
         self.gpu_id = gpu_id
-        self.device = torch.device('cuda:%d'%self.gpu_id if torch.cuda.is_available() else 'cpu')
+        if self.gpu_id is not None:
+            self.device = torch.device('cuda:%d'%self.gpu_id if torch.cuda.is_available() else 'cpu')
+        else:
+            self.device = 'cpu'
         self.es_improvement = es_improvement
         self.es_patience = es_patience
         self.es_period = es_period

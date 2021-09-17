@@ -27,7 +27,7 @@ class OgbnMag(Dataset):
         
     def prepare(self):
         d_all = {}
-        for i in tqdm.tqdm(self.n_splits):
+        for i in tqdm.tqdm(range(1)):#:self.n_splits)):
             dname = glob.glob(self.path+"/%d/"%(i+1) + self.pattern%i)[0]
             with open(dname, 'rb') as f:
                 d = pickle.load(f)
@@ -35,7 +35,7 @@ class OgbnMag(Dataset):
                     d_all[key] = ConfigDict(val)
         
         for idx, d in tqdm.tqdm(d_all.items()):
-            if self.indices is not None and idx in self.indices:
+            if self.indices is None or idx in self.indices:
                 if self.require_min_dfs_code:
                     if "min_dfs_code" in d and d.min_dfs_code is not None and len(d.min_dfs_code) > 1:
                         if len(d.node_labels) > self.max_nodes:
@@ -51,6 +51,8 @@ class OgbnMag(Dataset):
                                      min_dfs_code = torch.tensor(d.min_dfs_code),
                                      min_dfs_index  = torch.tensor(d.dfs_index, dtype=torch.long),
                                      y = d.y)
+                        self.data += [data_]   
+                
                 else:
                     data_ = Data(idx=idx,
                                 edge_index = d.edge_index,
@@ -58,8 +60,7 @@ class OgbnMag(Dataset):
                                 edge_labels = torch.tensor(d.edge_labels),
                                 graph_features = torch.tensor(d.graph_features),
                                 y = d.y)
-                    
-                self.data += [data_]   
+                    self.data += [data_]   
         
     def __len__(self):
         return len(self.data)

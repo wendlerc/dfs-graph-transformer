@@ -20,6 +20,7 @@ RDLogger.DisableLog('rdApp.*')
 import networkx as nx
 from chemprop.features.featurization import atom_features, bond_features
 import dfs_code
+import glob
 
 
 bonds =  {BT.SINGLE: 0, BT.DOUBLE: 1, BT.AROMATIC: 2, BT.TRIPLE: 3, "loop": 4}
