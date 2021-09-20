@@ -154,7 +154,7 @@ class Trainer():
                             break
                             
                     step += 1
-                self.wandb.log({'train-'+key: value for key, value in log.items() if 'batch' not in key})
+                self.wandb.log({'train-'+key: value for key, value in log.items() if ('batch' not in key and 'valid' not in key)})
                     
                 
                     
