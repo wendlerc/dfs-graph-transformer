@@ -30,6 +30,7 @@ dgl = "^0.6.1"
 dgllife = "^0.2.8"
 ml-collections = "^0.1.0"
 PyYAML = "^5.4.1"
+einops = "^0.3.2"
 
 [tool.poetry.dev-dependencies]
 
