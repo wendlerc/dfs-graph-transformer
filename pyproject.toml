@@ -5,7 +5,7 @@ description = "Implementation of a graph transformer, which acts on graphs via t
 authors = ["Chris Wendler <chris.wendler@inf.ethz.ch>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 torch-geometric = "^1.7.2"
 torch = "^1.9.0"
 matplotlib = "^3.4.2"

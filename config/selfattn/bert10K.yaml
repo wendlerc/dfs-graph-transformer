@@ -1,4 +1,5 @@
 model:
+    class: "DFSCodeSeq2SeqFC"
     n_atoms: 118
     n_bonds: 5
     emb_dim: 120
@@ -17,9 +18,8 @@ data:
     n_iter_per_split: 1000 # the data is split in the preprocessing step into n shards,
     # n_used determines how many of these shards to process at once and n_iter_per_split 
     # determines how many passes to do over this split
-    path: "./results/pubchem/noH/10K/"
-    valid_path: "./results/pubchem/noH/validation/"
-    batch_size: 50
+    path: "/cluster/work/pueschel/pubchem/10K/"
+    valid_path: "/cluster/work/pueschel/pubchem/validation/"
     
 training:
     mode: min2min
@@ -30,13 +30,13 @@ training:
     lr_patience: 5
     decay_factor: 0.8
     minimal_lr: 0.00000006
-    batch_size: 50
-    accumulate_grads: 2
+    batch_size: 30
+    accumulate_grads: 3
     gpu_id: 0
     es_patience: 10
     es_improvement: 0.0
     pretrained_dir: null
-    es_path: null
+    es_path: "/cluster/work/pueschel/models/pubchem/10K/bert/"
     load_last: False
     
 

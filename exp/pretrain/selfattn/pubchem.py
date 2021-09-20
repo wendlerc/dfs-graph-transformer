@@ -32,6 +32,7 @@ if __name__ == "__main__":
         for key1,value1 in value.items():
             config[key][key1] = value1
     
+    wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
     run = wandb.init(mode=args.wandb_mode, 
                      project=args.wandb_project, 
                      entity=args.wandb_entity, 
