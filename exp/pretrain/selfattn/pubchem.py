@@ -67,7 +67,7 @@ if __name__ == "__main__":
     validloader = None
     if d.valid_path is not None:
         validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges)
-        validloader = DataLoader(validset, batch_size=d.batch_size, shuffle=True, 
+        validloader = DataLoader(validset, batch_size=t.batch_size, shuffle=True, 
                                  pin_memory=False, collate_fn=collate_fn)
         exclude = validset.smiles
     
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         for split in range(n_splits):
             dataset = PubChem(d.path, n_used = d.n_used, max_nodes=m.max_nodes, 
                               max_edges=m.max_edges, exclude=exclude)
-            loader = DataLoader(dataset, batch_size=d.batch_size, shuffle=True, 
+            loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
                                 pin_memory=False, collate_fn=collate_fn)
             trainer.loader = loader
             trainer.fit()
