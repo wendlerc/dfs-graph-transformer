@@ -4,7 +4,9 @@ bold means important, stuff that people are working on contains names
 ### Show that the new representation can solve an actual problem
 - [ ] show that there are advantages of using DFS codes over smiles 
 - [ ] show that DFS codes can capture stereochemical properties 
-- [ ] show that DFS codes work well on other types of graphs (ogb-mag seems to be a good fit)
+- [ ] show that DFS codes work well on other types of graphs 
+- [x] try ogb-mag node prediction task 
+- [ ] try protein classification tasks
 
 ### Evaluate the following baselines on our moleculenet splits
 - [x] DMPNN
