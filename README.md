@@ -20,7 +20,7 @@ bold means important, stuff that people are working on contains names
 #### improve the results
 - [ ] Chris **implement a version that utilizes self-loops**
 - [ ] make larger model converge
-- [ ] check whether having multiple cls tokens is helpful
+- [x] check whether having multiple cls tokens is helpful
 - [ ] tweak the way the gradients are propagated through the cls token 
 - [ ] come up with a way to make the rnd2min pretraining converge to 0 loss
 - [x] add a term to the pretraining objective that depends on the features  
@@ -48,18 +48,21 @@ pip install torch-geometric
 pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.9.0+cu102.html
 pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.9.0+cu102.html
 
-git pull https://gitlab.inf.ethz.ch/ewszola/dfs-code-representation
+pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html
+
+git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
 cd dfs-code-representation
 git checkout vertexids
 pip install . 
-pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html
 ```
 
 Baseline:
 
+```bash
 pip install git+https://github.com/bp-kelley/descriptastorus
 
 pip install chemprop
+```
 
 Examples:
 
