@@ -9,10 +9,11 @@ Created on Mon Sep 13 19:10:09 2021
 import torch
 import tqdm
 from .early_stopping import EarlyStopping
+from .utils import to_cuda
 import numpy as np
 import os
 from collections import defaultdict
-
+import functools
 
 class Trainer():
     def __init__(self, model, loader, loss, validloader=None, metrics={}, optimizer=torch.optim.Adam,
@@ -68,12 +69,7 @@ class Trainer():
         model = self.model
         optim = self.optim
         lr_scheduler = self.lr_scheduler
-        def to_cuda(T):
-            if type(T) is list:
-                return [t.to(self.device) for t in T]
-            else:
-                return T.to(self.device)
-            
+        to_cuda = functools.partial(to_cuda, device=self.device)
         try:
             step = 0
             for epoch in range(self.n_epochs):
