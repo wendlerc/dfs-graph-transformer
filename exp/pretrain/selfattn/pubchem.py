@@ -36,6 +36,9 @@ if __name__ == "__main__":
         for key1,value1 in value.items():
             config[key][key1] = value1
     
+    if config.model.use_loops:
+        config.model.max_edges += config.model.max_nodes
+    
     wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
     run = wandb.init(mode=args.wandb_mode, 
                      project=args.wandb_project, 
@@ -69,7 +72,14 @@ if __name__ == "__main__":
     
     fields = ['acc-dfs1', 'acc-dfs2', 'acc-atm1', 'acc-atm2', 'acc-bnd']
     metrics = {field:functools.partial(seq_acc, idx=idx) for idx, field in enumerate(fields)}
+        
     model = DFSCodeSeq2SeqFC(**m)
+    
+    if m.use_loops: # undo the thing for the dataloader
+        m.max_edges -= m.max_nodes
+    
+    if m.use_loops:
+        m.max_edges = m.max_edges + m.max_nodes
     
     if t.load_last and t.es_path is not None:
         model.load_state_dict(torch.load(t.es_path+'checkpoint.pt', map_location=device))
