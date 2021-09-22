@@ -106,8 +106,10 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
                 edge_features = torch.cat((edge_features, loop), dim=0)
                 vids = torch.argsort(index).unsqueeze(1)
                 eids = torch.ones_like(vids)*(edge_features.shape[0] - 1)
+                nattr = d.z[vids]
+                eattr = torch.ones_like(vids)*4 # 4 stands for loop
                 arange = index[vids]
-                loops = torch.cat((arange, arange, arange, arange, arange, vids, eids, vids), dim=1)
+                loops = torch.cat((arange, arange, nattr, eattr, nattr, vids, eids, vids), dim=1)
                 code = torch.cat((code, loops), dim=0)
                 
             node_batch += [d.node_features]
@@ -137,9 +139,13 @@ def collate_rnd2min(dlist, use_loops=False):
                 min_vids = torch.argsort(d.min_dfs_index).unsqueeze(1)
                 rnd_vids = torch.argsort(torch.tensor(rnd_index, dtype=torch.long)).unsqueeze(1)
                 eids = torch.ones_like(min_vids)*(edge_features.shape[0] - 1)
+                min_nattr = d.z[min_vids]
+                rnd_nattr = d.z[rnd_vids]
+                eattr = torch.ones_like(min_vids)*4 # 4 stands for loop
                 arange = d.min_dfs_index[min_vids]
-                min_loops = torch.cat((arange, arange, arange, arange, arange, min_vids, eids, min_vids), dim=1)
-                rnd_loops = torch.cat((arange, arange, arange, arange, arange, rnd_vids, eids, rnd_vids), dim=1)
+                
+                min_loops = torch.cat((arange, arange, min_nattr, eattr, min_nattr, min_vids, eids, min_vids), dim=1)
+                rnd_loops = torch.cat((arange, arange, rnd_nattr, eattr, rnd_nattr, rnd_vids, eids, rnd_vids), dim=1)
                 min_code = torch.cat((min_code, min_loops), dim=0)
                 rnd_code = torch.cat((rnd_code, rnd_loops), dim=0)
                 
