@@ -22,12 +22,16 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--yaml', type=str, default="./config/selfattn/bert.yaml") 
     parser.add_argument('--name', type=str, default=None)
+    parser.add_argument('--loops', dest='loops', action='store_true')
     parser.add_argument('--overwrite', type=json.loads, default="{}")
+    parser.set_defaults(loops=False)
     args = parser.parse_args()
     
     with open(args.yaml) as file:
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
+    config.model.use_loops = args.loops
+
     for key,value in args.overwrite.items():
         for key1,value1 in value.items():
             config[key][key1] = value1
@@ -48,11 +52,18 @@ if __name__ == "__main__":
     loss = functools.partial(seq_loss, ce=ce, m=m)
     
     if config.training.mode == "min2min":
-        collate_fn = functools.partial(collate_BERT, mode="min2min", fraction_missing = config.training.fraction_missing)
+        collate_fn = functools.partial(collate_BERT, 
+                                       mode="min2min", 
+                                       fraction_missing = config.training.fraction_missing,
+                                       use_loops=m.use_loops)
     elif config.training.mode == "rnd2rnd":
-        collate_fn = functools.partial(collate_BERT, mode="rnd2rnd", fraction_missing = config.training.fraction_missing)
+        collate_fn = functools.partial(collate_BERT, 
+                                       mode="rnd2rnd", 
+                                       fraction_missing = config.training.fraction_missing,
+                                       use_loops=m.use_loops)
     elif config.training.mode == "rnd2min":
-        collate_fn = collate_rnd2min
+        collate_fn = functools.partial(collate_rnd2min,
+                                       use_loops=m.use_loops)
     else:
         raise ValueError("unknown config.training.mode %s"%config.training.mode)        
     
