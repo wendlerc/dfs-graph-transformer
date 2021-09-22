@@ -78,9 +78,6 @@ if __name__ == "__main__":
     if m.use_loops: # undo the thing for the dataloader
         m.max_edges -= m.max_nodes
     
-    if m.use_loops:
-        m.max_edges = m.max_edges + m.max_nodes
-    
     if t.load_last and t.es_path is not None:
         model.load_state_dict(torch.load(t.es_path+'checkpoint.pt', map_location=device))
     elif t.pretrained_dir is not None:
