@@ -11,6 +11,12 @@ import torch.nn as nn
 import numpy as np
 import dfs_code
 
+def to_cuda(T, device):
+    if type(T) is list:
+        return [t.to(device) for t in T]
+    else:
+        return T.to(device)
+
 def seq_loss(pred, target, m, ce=nn.CrossEntropyLoss(ignore_index=-1)):
     """
     

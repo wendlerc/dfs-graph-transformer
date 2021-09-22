@@ -127,15 +127,31 @@ if __name__ == "__main__":
                             collate_fn=collate_smiles_minc_rndc_features_y)
         smiles = []
         features = []
-        for i, data in enumerate(tqdm.tqdm(loader)):
-            smls, rndc, minc, nfeat, efeat, y = data
-            if t.use_min:
+        
+        if t.use_min: 
+            for i, data in enumerate(tqdm.tqdm(loader)):
+                smls, rndc, minc, nfeat, efeat, y = data
                 code = to_cuda(minc)
-            else:
+                feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
+                smiles += smls
+                features += [feats.detach().cpu()]
+        else:
+            for i, data in enumerate(tqdm.tqdm(loader)):
+                smls, rndc, minc, nfeat, efeat, y = data
                 code = to_cuda(rndc)
-            feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
-            smiles += smls
-            features += [feats.detach().cpu()]
+                feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
+                smiles += smls
+                features += [feats.detach().cpu()]
+            
+            for rep in range(19):
+                for i, data in enumerate(tqdm.tqdm(loader)):
+                    smls, rndc, minc, nfeat, efeat, y = data
+                    code = to_cuda(rndc)
+                    feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
+                    smiles += smls
+                    features[i] += feats.detach().cpu()
+            features = [feature/20 for feature in features]
+                
         features = torch.cat(features, dim=0)
         features_dict = {smile:feature for smile, feature in zip(smiles, features)}
         
@@ -144,6 +160,8 @@ if __name__ == "__main__":
         # 2. run evaluation
         roc_avgs = []
         prc_avgs = []
+        
+        
         for rep in range(10):
             if t.n_hidden > 0:
                 layers = []

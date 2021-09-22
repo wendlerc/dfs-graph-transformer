@@ -9,7 +9,7 @@ Created on Mon Sep 13 19:10:09 2021
 import torch
 import tqdm
 from .early_stopping import EarlyStopping
-from .utils import to_cuda
+from .utils import to_cuda as utils_to_cuda
 import numpy as np
 import os
 from collections import defaultdict
@@ -69,7 +69,7 @@ class Trainer():
         model = self.model
         optim = self.optim
         lr_scheduler = self.lr_scheduler
-        to_cuda = functools.partial(to_cuda, device=self.device)
+        to_cuda = functools.partial(utils_to_cuda, device=self.device)
         try:
             step = 0
             for epoch in range(self.n_epochs):
@@ -126,21 +126,21 @@ class Trainer():
                             with torch.no_grad():
                                 pbar_valid = tqdm.tqdm(self.validloader)
                                 for i, data in enumerate(pbar_valid):
-                                    log = {}
+                                    valid_log = {}
                                     inputs = [to_cuda(d) for d in data[:-1]]
                                     output = to_cuda(data[-1])
                                     pred = self.model(*inputs)
                                     loss = self.loss(pred, output)
                                     valid_loss = (valid_loss*i + loss.item())/(i+1)
-                                    log['valid-loss'] = valid_loss
+                                    valid_log['valid-loss'] = valid_loss
                                     pbar_string = "Valid %d: loss %2.6f"%(epoch+1, epoch_loss)
                                     for name, metric in self.metrics.items():
                                         res = metric(pred, output)
                                         valid_metric[name] = (valid_metric[name]*i + res.item())/(i+1)
-                                        log['valid-'+name] = valid_metric[name]
+                                        valid_log['valid-'+name] = valid_metric[name]
                                         pbar_string += " %2.4f"%res
                                     pbar_valid.set_description(pbar_string)
-                                self.wandb.log(log)
+                                self.wandb.log(valid_log)
                             self.early_stopping(valid_loss, model)
                         else:
                             self.early_stopping(epoch_loss, model)

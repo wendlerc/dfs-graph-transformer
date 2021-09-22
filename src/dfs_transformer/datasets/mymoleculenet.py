@@ -62,9 +62,10 @@ class Deepchem2TorchGeometric(Dataset):
                     min_code = dfs[smiles]['min_dfs_code']
                     min_index = dfs[smiles]['dfs_index']
                 else:
+                    print("%s timed out during the minimal dfs code computation."%smiles)
                     continue
             else:
-                d = smiles2graph(smiles, self.useHs, self.addLoops, not self.trimEdges, self.max_nodes, self.max_edges)
+                d = smiles2graph(smiles, self.useHs, self.addLoops, self.max_nodes, self.max_edges)
                 if d is None:
                     continue
                 if self.onlyRandom:
