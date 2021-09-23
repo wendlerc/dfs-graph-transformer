@@ -20,7 +20,8 @@ class Trainer():
                  n_epochs=1000, accumulate_grads=1, lr=0.0003, lr_patience=5, 
                  lr_adjustment_period=500, decay_factor=0.8, minimal_lr=6e-8, 
                  lr_argument = lambda log: log['loss'], gpu_id=0, es_improvement=0.0, 
-                 es_patience=100, es_path=None, es_period=1000, wandb_run = None, **kwargs):
+                 es_patience=100, es_path=None, es_period=1000, wandb_run = None, 
+                 adam_betas=(0.9,0.98), adam_eps=1e-9, **kwargs):
         """
         data = next(iter(loader)),
         loss and metrics will be computed on model(data[:-1]), data[-1] 
@@ -53,7 +54,7 @@ class Trainer():
             self.es_path = es_path
         self.wandb = wandb_run 
         
-        self.optim = self.optimizer(model.parameters(), lr=self.lr)
+        self.optim = self.optimizer(model.parameters(), betas=adam_betas, eps=adam_eps, lr=self.lr)
         self.lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optim, 
                                                                        mode='min', 
                                                                        verbose=True, 
