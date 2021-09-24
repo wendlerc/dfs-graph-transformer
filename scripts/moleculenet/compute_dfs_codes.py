@@ -20,19 +20,16 @@ exp = Experiment('compute minimum dfs codes')
 
 @exp.config
 def cfg(_log):
-    nr = 0
-    total = 10
     max_nodes = np.inf
     max_edges = np.inf
     time_limit = 3600
     log_level = logging.INFO
     use_Hs = False
     add_loops = False
-    dont_trim = True
     dataset = "hiv"
 
 @exp.automain
-def main(dataset, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, dont_trim, _run, _log):
+def main(dataset, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, _run, _log):
     logging.basicConfig(level=log_level)
     dfs_codes = {}
     d_dict = {}
@@ -48,7 +45,7 @@ def main(dataset, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs
     for idx, smiles in tqdm.tqdm(enumerate(datasets[0].X)):
         try:
             time1 = time.time()
-            d = smiles2graph(smiles, use_Hs, add_loops, dont_trim, max_nodes, max_edges)
+            d = smiles2graph(smiles, use_Hs, add_loops, max_nodes, max_edges)
             code, dfs_index = dfs_code.min_dfs_code_from_torch_geometric(d, 
                                                                          d.z.numpy().tolist(), 
                                                                          np.argmax(d.edge_attr.numpy(), axis=1),
@@ -67,6 +64,7 @@ def main(dataset, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs
         except:
             logging.warning('%s failed'%smiles)
             exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
+            logging.warning(sys.exc_info()[0])
             logging.warning(sys.exc_info()[1])
             traceback.print_tb(sys.exc_info()[2])
             continue

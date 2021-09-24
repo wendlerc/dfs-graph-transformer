@@ -11,6 +11,7 @@ import torch.nn as nn
 import numpy as np
 import dfs_code
 from chemprop.features.featurization import atom_features, bond_features
+from copy import deepcopy
 
 
 def to_cuda(T, device):
@@ -112,7 +113,7 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
                 loops = torch.cat((arange, arange, nattr, eattr, nattr, vids, eids, vids), dim=1)
                 code = torch.cat((code, loops), dim=0)
                 
-            node_batch += [d.node_features]
+            node_batch += [d.node_features.clone()]
             edge_batch += [edge_features]
             code_batch += [code]
         inputs, outputs = BERTize(code_batch, fraction_missing=fraction_missing)
@@ -149,9 +150,49 @@ def collate_rnd2min(dlist, use_loops=False):
                 min_code = torch.cat((min_code, min_loops), dim=0)
                 rnd_code = torch.cat((rnd_code, rnd_loops), dim=0)
                 
-            node_batch += [d.node_features]
+            node_batch += [d.node_features.clone()]
             edge_batch += [edge_features]
             min_code_batch += [min_code]
             rnd_code_batch += [rnd_code]
         targets = nn.utils.rnn.pad_sequence(min_code_batch, padding_value=-1)
         return rnd_code_batch, node_batch, edge_batch, targets 
+    
+    
+def collate_downstream(dlist, alpha=0, use_loops=False, use_min=False):
+    smiles = []
+    node_batch = [] 
+    edge_batch = []
+    y_batch = []
+    rnd_code_batch = []
+    if use_loops:
+        loop = torch.tensor(bond_features(None)).unsqueeze(0)
+    for d in dlist:
+        edge_features = d.edge_features.clone()
+        if use_min:
+            code = d.min_dfs_code.clone()
+            index = d.min_dfs_index.clone()
+        else:
+            code, index = dfs_code.rnd_dfs_code_from_torch_geometric(d, d.z.numpy().tolist(), 
+                                                                     np.argmax(d.edge_attr.numpy(), axis=1).tolist())
+            
+            code = torch.tensor(np.asarray(code), dtype=torch.long)
+            index = torch.tensor(np.asarray(index), dtype=torch.long)
+        
+        if use_loops:
+            edge_features = torch.cat((edge_features, loop), dim=0)
+            vids = torch.argsort(index).unsqueeze(1)
+            eids = torch.ones_like(vids)*(edge_features.shape[0] - 1)
+            nattr = d.z[vids]
+            eattr = torch.ones_like(vids)*4 # 4 stands for loop
+            arange = index[vids]
+            loops = torch.cat((arange, arange, nattr, eattr, nattr, vids, eids, vids), dim=1)
+            code = torch.cat((code, loops), dim=0).clone()
+        
+        rnd_code_batch += [code]
+        node_batch += [d.node_features.clone()]
+        edge_batch += [edge_features]
+        y_batch += [d.y.clone()]
+        smiles += [deepcopy(d.smiles)]
+    y = torch.cat(y_batch).unsqueeze(1)
+    y = (1-alpha)*y + alpha/2
+    return smiles, rnd_code_batch, node_batch, edge_batch, y

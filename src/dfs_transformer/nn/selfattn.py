@@ -11,6 +11,8 @@ import torch.nn as nn
 import math
 from .utils import PositionalEncoding
 from einops import rearrange
+from torchdistill.core.forward_hook import ForwardHookManager
+
 
 class DFSCodeEncoder(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 
@@ -97,6 +99,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
                  max_nodes=250, max_edges=500, dropout=0.1, 
                  missing_value=None, **kwargs):
         super().__init__()
+        self.nlayers = nlayers
         self.ninp = emb_dim * 5
         self.n_class_tokens = n_class_tokens
         atom_embedding = nn.Linear(n_node_features, emb_dim)
@@ -133,12 +136,25 @@ class DFSCodeSeq2SeqFC(nn.Module):
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
     def encode(self, C, N, E, method="cls"):
+        if method == "cls3":
+            forward_hook_manager = ForwardHookManager(C[0].device)
+            for lid in range(self.nlayers): 
+                forward_hook_manager.add_hook(self.encoder, 'enc.layers.%d'%lid, requires_input=False, requires_output=True)
         ncls = self.n_class_tokens
         self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
         if method == "cls":
             #features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
             features = self_attn[:ncls]
             features = rearrange(features, 'd0 d1 d2 -> d1 (d0 d2)')
+        elif method == "cls3":
+            io_dict = forward_hook_manager.pop_io_dict()
+            fs = []
+            for lid in range(self.nlayers):
+                out = io_dict['enc.layers.%d'%lid]['output']
+                f = out[:ncls]
+                f = rearrange(f, 'd0 d1 d2 -> d1 (d0 d2)')
+                fs += [f]
+            features =  torch.cat(fs, dim=1)
         elif method == "sum":
             features = torch.sum(self_attn[ncls:], dim=0)
         elif method == "mean":
@@ -149,10 +165,31 @@ class DFSCodeSeq2SeqFC(nn.Module):
             fcls = self_attn[0]
             fmean = torch.mean(self_attn[ncls:], dim=0)
             fmax = torch.max(self_attn[ncls:], dim=0)[0]
-            features = torch.cat((fcls, fmean, fmax), axis=1)
+            features = torch.cat((fcls, fmean, fmax), dim=1)
+        elif method == "cls-mmm":
+            fmin = torch.min(self_attn, dim=0)[0]
+            fmean = torch.mean(self_attn, dim=0)
+            fmax = torch.max(self_attn, dim=0)[0]
+            features1 = torch.cat((fmin, fmean, fmax), dim=1)
+            features2 = self_attn[:ncls]
+            features2 = rearrange(features2, 'd0 d1 d2 -> d1 (d0 d2)')
+            features = torch.cat((features1, features2), dim=1)
+        elif method == "min-mean-max":
+            fmin = torch.min(self_attn, dim=0)[0]
+            fmean = torch.mean(self_attn, dim=0)
+            fmax = torch.max(self_attn, dim=0)[0]
+            features = torch.cat((fmin, fmean, fmax), dim=1)
+        elif method == "max-of-cls":
+            features = torch.max(self_attn[:ncls], dim=0)[0]
+        elif method == "mean-of-cls":
+            features = torch.mean(self_attn[:ncls], dim=0)
+        elif method == "max-mean-of-cls":
+            features = torch.cat((torch.max(self_attn[:ncls], dim=0)[0], torch.mean(self_attn[:ncls], dim=0)), dim=1)
+        elif int(method) < ncls:
+            features = self_attn[int(method)]
         else:
             raise ValueError("unsupported method")
-        return features.view(self_attn.shape[1], -1) # this can shuffle the features of different examples.
+        return features.view(self_attn.shape[1], -1)
     
     
 class DFSCodeSeq2SeqFCFeatures(nn.Module):
