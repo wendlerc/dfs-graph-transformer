@@ -99,28 +99,29 @@ if __name__ == "__main__":
         n_splits = 1
     else:
         n_splits = n_files // d.n_used
-        
-    for epoch in range(t.n_epochs):
-        print('starting epoch %d'%(epoch+1))
-        for split in range(n_splits):
-            dataset = PubChem(d.path, n_used = d.n_used, max_nodes=m.max_nodes, 
-                              max_edges=m.max_edges, exclude=exclude)
-            loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
-                                pin_memory=False, collate_fn=collate_fn)
-            trainer.loader = loader
-            trainer.fit()
+    try:    
+        for epoch in range(t.n_epochs):
+            print('starting epoch %d'%(epoch+1))
+            for split in range(n_splits):
+                dataset = PubChem(d.path, n_used = d.n_used, max_nodes=m.max_nodes, 
+                                  max_edges=m.max_edges, exclude=exclude)
+                loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
+                                    pin_memory=False, collate_fn=collate_fn)
+                trainer.loader = loader
+                trainer.fit()
+                if trainer.stop_training:
+                    break
             if trainer.stop_training:
                 break
-        if trainer.stop_training:
-            break
-    
-    #store config and model
-    with open(trainer.es_path+'config.yaml', 'w') as f:
-        yaml.dump(config.to_dict(), f, default_flow_style=False)
-    if args.name is not None and args.wandb_mode != "offline":
-        trained_model_artifact = wandb.Artifact(args.name, type="model", description="trained selfattn model")
-        trained_model_artifact.add_dir(trainer.es_path)
-        run.log_artifact(trained_model_artifact)
+    finally:
+        print("uploading model...")
+        #store config and model
+        with open(trainer.es_path+'config.yaml', 'w') as f:
+            yaml.dump(config.to_dict(), f, default_flow_style=False)
+        if args.name is not None and args.wandb_mode != "offline":
+            trained_model_artifact = wandb.Artifact(args.name, type="model", description="trained selfattn model")
+            trained_model_artifact.add_dir(trainer.es_path)
+            run.log_artifact(trained_model_artifact)
         
         
     
