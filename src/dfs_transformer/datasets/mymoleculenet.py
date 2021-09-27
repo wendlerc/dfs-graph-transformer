@@ -77,7 +77,8 @@ class Deepchem2TorchGeometric(Dataset):
                                                                              d.z.numpy().tolist(), 
                                                                              np.argmax(d.edge_attr.numpy(), axis=1))
                 
-                
+            min_code = np.asarray(min_code)
+            min_index = np.asarray(min_index)
             z = d['z']
             x = d['x']
             if self.features == "old":

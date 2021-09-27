@@ -14,11 +14,16 @@ import pandas as pd
 import sys
 from sklearn.metrics import roc_auc_score, average_precision_score
 sys.path = ['./src'] + sys.path
-from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_smiles_minc_rndc_features_y, \
+from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_downstream, \
 DFSCodeSeq2SeqFCFeatures
+from dfs_transformer import to_cuda as to_cuda_
 import argparse
 import yaml
 from ml_collections import ConfigDict
+import functools
+from copy import deepcopy
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 def load_selfattn(t, device):
     model_dir = None
@@ -47,7 +52,7 @@ def load_selfattn(t, device):
     if model_dir is not None:
         model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
         
-    return model
+    return model, m
 
 def score(loader, model):
     with torch.no_grad():
@@ -72,12 +77,15 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
     parser.add_argument('--wandb_project', type=str, default="moleculenet10")
     parser.add_argument('--wandb_mode', type=str, default="online")
-    parser.add_argument('--yaml', type=str, default="./config/selfattn/finetune_bert.yaml") 
+    parser.add_argument('--yaml', type=str, default="./config/selfattn/moleculenet.yaml") 
     parser.add_argument('--name', type=str, default=None)
+    parser.add_argument('--model', type=str, default=None)
     parser.add_argument('--n_hidden', type=int, default=0)
     parser.add_argument('--overwrite', type=json.loads, default="{}")
+    #parser.add_argument('--loops', dest='loops', action='store_true')
+    #parser.set_defaults(loops=False)
     args = parser.parse_args()
-    
+        
     with open(args.yaml) as file:
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
@@ -87,6 +95,11 @@ if __name__ == "__main__":
                 config[key][key1] = value1
         else:
             config[key] = value
+    
+    if args.model is not None:
+        config.pretrained_model = args.model
+        if args.name is None:
+            args.name = args.model
             
     config.n_hidden = args.n_hidden
     t = config
@@ -97,13 +110,18 @@ if __name__ == "__main__":
     np.random.seed(t.seed)
     
     device = torch.device('cuda:%d'%t.gpu_id if torch.cuda.is_available()  else 'cpu')
-    to_cuda = lambda T: [t.to(device) for t in T]
+    to_cuda = functools.partial(to_cuda_, device=device)
     
-    model = load_selfattn(t, device)
+    model, m = load_selfattn(t, device)
     model.to(device)
     print('loaded pretrained model')
     
-    datasets = ['bbbp', 'clintox', 'tox21', 'hiv']
+    if "use_loops" not in m:
+        m.use_loops = False
+    
+    collate_fn = functools.partial(collate_downstream, use_loops=m.use_loops, use_min=t.use_min)
+    
+    datasets = ['bbbp', 'clintox', 'tox21']#, 'hiv']
     
     for idx, dataset in enumerate(datasets):
         run = wandb.init(args.wandb_mode, 
@@ -123,34 +141,34 @@ if __name__ == "__main__":
         X = np.concatenate((train_X, valid_X, test_X), axis=0)
         y = np.concatenate((train_y, valid_y, test_y), axis=0)
         dset = Deepchem2TorchGeometric(X, y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
-        loader = DataLoader(dset, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
-                            collate_fn=collate_smiles_minc_rndc_features_y)
+        loader = DataLoader(dset, batch_size=t.batch_size_preproc, shuffle=False, pin_memory=False, 
+                            collate_fn=collate_fn, num_workers=t.num_workers)
         smiles = []
         features = []
         
         if t.use_min: 
             for i, data in enumerate(tqdm.tqdm(loader)):
-                smls, rndc, minc, nfeat, efeat, y = data
+                smls, minc, nfeat, efeat, y = data
                 code = to_cuda(minc)
                 feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
-                smiles += smls
+                smiles += deepcopy(smls)
                 features += [feats.detach().cpu()]
         else:
             for i, data in enumerate(tqdm.tqdm(loader)):
-                smls, rndc, minc, nfeat, efeat, y = data
+                smls, rndc, nfeat, efeat, y = data
                 code = to_cuda(rndc)
                 feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
-                smiles += smls
+                smiles += deepcopy(smls)
                 features += [feats.detach().cpu()]
+                
             
-            for rep in range(19):
+            for rep in range(9):
                 for i, data in enumerate(tqdm.tqdm(loader)):
-                    smls, rndc, minc, nfeat, efeat, y = data
+                    smls, rndc, nfeat, efeat, y = data
                     code = to_cuda(rndc)
                     feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
-                    smiles += smls
                     features[i] += feats.detach().cpu()
-            features = [feature/20 for feature in features]
+            features = [feature/10 for feature in features]
                 
         features = torch.cat(features, dim=0)
         features_dict = {smile:feature for smile, feature in zip(smiles, features)}

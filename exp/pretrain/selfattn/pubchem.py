@@ -13,6 +13,7 @@ import argparse
 import yaml
 import functools
 from ml_collections import ConfigDict
+from copy import deepcopy
 
 
 if __name__ == "__main__":
@@ -45,9 +46,9 @@ if __name__ == "__main__":
                      entity=args.wandb_entity, 
                      name=args.name, config=config.to_dict())
     
-    m = config.model
-    t = config.training
-    d = config.data
+    m = deepcopy(config.model)
+    t = deepcopy(config.training)
+    d = deepcopy(config.data)
     print(config)
     device = torch.device('cuda:%d'%config.training.gpu_id if torch.cuda.is_available() else 'cpu')
     

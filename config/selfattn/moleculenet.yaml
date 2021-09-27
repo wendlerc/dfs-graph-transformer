@@ -1,0 +1,30 @@
+data_dir_pattern: "./datasets/mymoleculenet/%s/"
+load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
+model_dir_pattern: "./models/%s/"
+n_hidden: 0
+lr_head: 0.003
+n_epochs: 25
+lr_patience: 3
+decay_factor: 0.8
+minimal_lr: 0.00000006
+batch_size_preproc: 30
+batch_size: 300
+accumulate_grads: 1
+gpu_id: 0
+es_patience: 10
+es_improvement: 0.0
+pretrained_class: 'DFSCodeSeq2SeqFC'
+pretrained_project: 'pubchem'
+pretrained_entity: 'dfstransformer'
+pretrained_model: 'bert-10M'
+pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
+use_local_yaml: False
+pretrained_dir: null
+es_path: null
+load_last: True
+use_min: True
+fingerprint: 'cls' # mean, max, sum, cls-mean-max
+strict: True
+dataset: 'bbbp'
+seed: 123
+num_workers: 8
