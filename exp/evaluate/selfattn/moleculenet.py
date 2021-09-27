@@ -121,7 +121,7 @@ if __name__ == "__main__":
     
     collate_fn = functools.partial(collate_downstream, use_loops=m.use_loops, use_min=t.use_min)
     
-    datasets = ['bbbp', 'clintox', 'tox21']#, 'hiv']
+    datasets = ['bbbp', 'clintox', 'tox21', 'hiv']
     
     for idx, dataset in enumerate(datasets):
         run = wandb.init(args.wandb_mode, 
