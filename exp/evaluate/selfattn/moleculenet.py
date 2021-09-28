@@ -33,9 +33,10 @@ def load_selfattn(t, device):
         run = wandb.init(mode=args.wandb_mode, 
                          project=t.pretrained_project, 
                          entity=t.pretrained_entity, 
-                         job_type="inference")
+                         job_type="inference",
+                         dir=t.wandb_dir)
         model_at = run.use_artifact(t.pretrained_model + ":latest")
-        model_dir = model_at.download()
+        model_dir = model_at.download(root='/cluster/work/pueschel/artifacts/%s/'%t.pretrained_model)
         run.finish()
     elif t.pretrained_dir is not None:
         model_dir = t.pretrained_dir
@@ -77,6 +78,7 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
     parser.add_argument('--wandb_project', type=str, default="moleculenet10")
     parser.add_argument('--wandb_mode', type=str, default="online")
+    parser.add_argument('--wandb_dir', type=str, default="/cluster/scratch/wendlerc/wandb")
     parser.add_argument('--yaml', type=str, default="./config/selfattn/moleculenet.yaml") 
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--model', type=str, default=None)
@@ -102,6 +104,7 @@ if __name__ == "__main__":
             args.name = args.model
             
     config.n_hidden = args.n_hidden
+    config.wandb_dir = args.wandb_dir
     t = config
     print(t)
 
@@ -128,7 +131,8 @@ if __name__ == "__main__":
                  project=args.wandb_project, 
                  entity=args.wandb_entity, 
                  name=args.name, config=config.to_dict(),
-                 reinit=True)
+                 reinit=True,
+                 dir=args.wandb_dir)
         wandb.config.update({'dataset': dataset}, allow_val_change=True)
         # 1. compute all feature vectors
         rep = 0
@@ -172,8 +176,8 @@ if __name__ == "__main__":
                 
         features = torch.cat(features, dim=0)
         features_dict = {smile:feature for smile, feature in zip(smiles, features)}
-        
-        model_dir = t.model_dir_pattern%dataset+'%d/'%np.random.randint(100000)
+        mname = "".join(x for x in t.pretrained_model if x.isalnum())
+        model_dir = t.model_dir_pattern%dataset+'/%s/%d/'%(mname, np.random.randint(100000))
         os.makedirs(model_dir, exist_ok=True)
         # 2. run evaluation
         roc_avgs = []
