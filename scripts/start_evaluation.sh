@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "Be careful with the cluster file system... the evaluation script stores and loads the head checkpoints"
+
 MEMORY=40960
 GPU=GeForceRTX2080Ti
 
