@@ -21,10 +21,10 @@ done
 
 for size in 10K 100K 1M 10M
 do 
-    bsub -o rnd2min_eval_$frac$size.log -n 8 -W 02:00 -R "rusage[mem=$MEMORY, ngpus_excl_p=1]" -R "select[gpu_model0==$GPU]" python exp/evaluate/selfattn/moleculenet.py --overwrite '{"use_min" : false, "fingerprint" : "cls3"}' --wandb_project moleculenet10-size --model rnd2min-$size-euler 
+    bsub -o rnd2min_eval_$size.log -n 8 -W 02:00 -R "rusage[mem=$MEMORY, ngpus_excl_p=1]" -R "select[gpu_model0==$GPU]" python exp/evaluate/selfattn/moleculenet.py --overwrite '{"use_min" : false, "fingerprint" : "cls3"}' --wandb_project moleculenet10-size --model rnd2min-$size-euler 
 done
 
 for size in 10M
 do 
-    bsub -o rnd2min_eval_$frac$size.log -n 8 -W 02:00 -R "rusage[mem=$MEMORY, ngpus_excl_p=1]" -R "select[gpu_model0==$GPU]" python exp/evaluate/selfattn/moleculenet.py --overwrite '{"use_min" : false, "fingerprint" : "cls3"}' --wandb_project moleculenet10-size --model rnd2min2-$size-euler 
+    bsub -o rnd2min_eval_$size.log -n 8 -W 02:00 -R "rusage[mem=$MEMORY, ngpus_excl_p=1]" -R "select[gpu_model0==$GPU]" python exp/evaluate/selfattn/moleculenet.py --overwrite '{"use_min" : false, "fingerprint" : "cls3"}' --wandb_project moleculenet10-size --model rnd2min2-$size-euler 
 done
