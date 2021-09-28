@@ -211,6 +211,13 @@ if __name__ == "__main__":
         roc_avgs_valid = []
         prc_avgs_valid = []
         
+        mname = "".join(x for x in t.pretrained_model + t.fingerprint if x.isalnum())
+        model_dir = t.model_dir_pattern%dataset+'/%s/%d/'%(mname, np.random.randint(100000))
+        os.makedirs(model_dir, exist_ok=True)
+        
+        wandb.config.update({'es_path': model_dir}, allow_val_change=True)
+        t.es_path = model_dir
+        
         for rep in range(10):
             n_encoding = encoder.get_n_encoding(t.fingerprint)
             model = TransformerPlusHead(deepcopy(encoder), n_encoding, 1, n_hidden=t.n_hidden, fingerprint=t.fingerprint)
