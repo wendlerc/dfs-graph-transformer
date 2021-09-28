@@ -36,7 +36,7 @@ def load_selfattn(t, device):
                          job_type="inference",
                          dir=t.wandb_dir)
         model_at = run.use_artifact(t.pretrained_model + ":latest")
-        model_dir = model_at.download(root='/cluster/work/pueschel/artifacts/%s/'%t.pretrained_model)
+        model_dir = model_at.download(root=t.wandb_dir+'/artifacts/%s/'%t.pretrained_model)
         run.finish()
     elif t.pretrained_dir is not None:
         model_dir = t.pretrained_dir
@@ -176,7 +176,7 @@ if __name__ == "__main__":
                 
         features = torch.cat(features, dim=0)
         features_dict = {smile:feature for smile, feature in zip(smiles, features)}
-        mname = "".join(x for x in t.pretrained_model if x.isalnum())
+        mname = "".join(x for x in t.pretrained_model + t.fingerprint if x.isalnum())
         model_dir = t.model_dir_pattern%dataset+'/%s/%d/'%(mname, np.random.randint(100000))
         os.makedirs(model_dir, exist_ok=True)
         # 2. run evaluation
