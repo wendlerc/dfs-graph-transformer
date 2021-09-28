@@ -119,6 +119,9 @@ if __name__ == "__main__":
     model.to(device)
     print('loaded pretrained model')
     
+    if "use_min" not in args.overwrite.keys():
+        config["use_min"] = m.missing_value == -1
+    
     if "use_loops" not in m:
         m.use_loops = False
     

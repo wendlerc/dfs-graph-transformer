@@ -16,7 +16,9 @@ from collections import defaultdict
 import functools
 
 class Trainer():
-    def __init__(self, model, loader, loss, validloader=None, metrics={}, optimizer=torch.optim.Adam,
+    #TODO: refactor such that this method takes an optimizer object instead of all these params...
+    def __init__(self, model, loader, loss, validloader=None, metrics={}, 
+                 scorer=None, optimizer=torch.optim.Adam,
                  n_epochs=1000, accumulate_grads=1, lr=0.0003, lr_patience=5, 
                  lr_adjustment_period=500, decay_factor=0.8, minimal_lr=6e-8, 
                  lr_argument = lambda log: log['loss'], gpu_id=0, es_improvement=0.0, 
@@ -31,6 +33,7 @@ class Trainer():
         self.validloader = validloader
         self.loss = loss
         self.metrics = metrics
+        self.scorer = scorer
         self.optimizer = optimizer
         self.n_epochs = n_epochs
         self.accumulate_grads = accumulate_grads
@@ -124,7 +127,13 @@ class Trainer():
                             
                     if (step + 1) % self.es_period == 0:
                         self.model.eval()
-                        if self.validloader is not None:
+                        if self.scorer is not None:
+                            with torch.no_grad():
+                                score = self.scorer(model)
+                            self.early_stopping(-score, model)
+                            self.wandb.log({"valid-score": score})
+                            
+                        elif self.validloader is not None:
                             valid_loss = 0
                             valid_metric = defaultdict(float)
                             with torch.no_grad():
@@ -137,7 +146,7 @@ class Trainer():
                                     loss = self.loss(pred, output)
                                     valid_loss = (valid_loss*i + loss.item())/(i+1)
                                     valid_log['valid-loss'] = valid_loss
-                                    pbar_string = "Valid %d: loss %2.6f"%(epoch+1, epoch_loss)
+                                    pbar_string = "Valid %d: loss %2.6f"%(epoch+1, valid_loss)
                                     for name, metric in self.metrics.items():
                                         res = metric(pred, output)
                                         valid_metric[name] = (valid_metric[name]*i + res.item())/(i+1)
@@ -156,9 +165,6 @@ class Trainer():
                     step += 1
                 self.wandb.log({'train-'+key: value for key, value in log.items() if (key == 'loss' or key in self.metrics.keys())})
                     
-                
-                    
-            
         except KeyboardInterrupt:
             torch.save(model.state_dict(), self.es_path+'checkpoint_keyboardinterrupt.pt')
             self.stop_training = True

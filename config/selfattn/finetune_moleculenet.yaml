@@ -1,10 +1,13 @@
 data_dir_pattern: "./datasets/mymoleculenet/%s/"
+#load_dir_pattern: "/cluster/work/pueschel/mymoleculenet_plus_features/%s/1/"
 load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
+#model_dir_pattern: "/cluster/scratch/wendlerc/models/%s/"
 model_dir_pattern: "./models/%s/"
+label_smoothing_alpha: 0
+n_hidden: 0
+lr_encoder: 0.000003
 lr_head: 0.003
-lr_pretrained: 0.000003
-weight_decay: 0.1
-clip_gradient: 0.5
+lr_adjustment_period: 300
 n_epochs: 25
 lr_patience: 3
 decay_factor: 0.8
@@ -12,9 +15,9 @@ minimal_lr: 0.00000006
 batch_size: 50
 accumulate_grads: 2
 gpu_id: 0
+es_period: 300
 es_patience: 10
 es_improvement: 0.0
-n_frozen: 5
 pretrained_class: 'DFSCodeSeq2SeqFC'
 pretrained_project: 'pubchem'
 pretrained_entity: 'dfstransformer'
@@ -25,7 +28,7 @@ pretrained_dir: null
 es_path: null
 load_last: True
 use_min: True
-fingerprint: 'cls' # mean, max, sum, cls-mean-max
+fingerprint: 'cls3' # mean, max, sum, cls-mean-max
 strict: True
 dataset: 'bbbp'
 seed: 123

@@ -191,6 +191,27 @@ class DFSCodeSeq2SeqFC(nn.Module):
             raise ValueError("unsupported method")
         return features.view(self_attn.shape[1], -1)
     
+    def get_n_encoding(self, method="cls"):
+        ncls = self.n_class_tokens
+        if method == "cls":
+            return ncls * self.ninp
+        elif method == "cls3":
+            return self.nlayers * ncls * self.ninp
+        elif method in {"sum", "mean", "max", "max-of-cls", "mean-of-cls"}:
+            return self.ninp
+        elif method == "cls-mmm":
+            return ncls*self.ninp + 3*self.ninp
+        elif method == "cls-mean-max":
+            return ncls * self.ninp + 2*self.ninp
+        elif method == "min-mean-max":
+            return 3*self.ninp
+        elif method == "max-mean-of-cls":
+            return 2*self.ninp
+        elif int(method) < ncls:
+            return self.ninp
+        else:
+            raise ValueError("unsupported method")
+    
     
 class DFSCodeSeq2SeqFCFeatures(nn.Module):
     def __init__(self, n_node_features, n_edge_features, 
@@ -270,4 +291,22 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
         else:
             raise ValueError("unsupported method")
         return features.view(self_attn.shape[1], -1)
+    
+    def get_n_encoding(self, method="cls"):
+        ncls = self.n_class_tokens
+        if method == "cls":
+            return ncls * self.ninp
+        elif method in {"sum", "mean", "max", "max-of-cls", "mean-of-cls"}:
+            return self.ninp
+        elif method == "cls-mean-max":
+            return ncls * self.ninp + 2*self.ninp
+        elif method == "min-mean-max":
+            return 3*self.ninp
+        elif method == "max-mean-of-cls":
+            return 2*self.ninp
+        elif int(method) < ncls:
+            return self.ninp
+        else:
+            raise ValueError("unsupported method")
+        
 
