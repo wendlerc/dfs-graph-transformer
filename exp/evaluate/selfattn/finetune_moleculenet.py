@@ -171,8 +171,9 @@ if __name__ == "__main__":
         config.pretrained_model = args.model
         if args.name is None:
             args.name = args.model
-            
-    config.n_hidden = args.n_hidden
+    
+    if "n_hidden" not in args.overwrite.keys():
+        config.n_hidden = args.n_hidden
     config.wandb_dir = args.wandb_dir
     t = config
     print(t)
