@@ -13,6 +13,32 @@ import torch.nn.functional as F
 import numpy as np
 import pickle
 
+acids2int = {'ALA': 0,
+ 'ARG': 1,
+ 'ASN': 2,
+ 'ASP': 3,
+ 'ASX': 4,
+ 'CYS': 5,
+ 'GLN': 6,
+ 'GLU': 7,
+ 'GLX': 8,
+ 'GLY': 9,
+ 'HIS': 10,
+ 'ILE': 11,
+ 'LEU': 12,
+ 'LYS': 13,
+ 'MET': 14,
+ 'PHE': 15,
+ 'PYL': 16,
+ 'SEC': 17,
+ 'SER': 18,
+ 'THR': 19,
+ 'TRP': 20,
+ 'TYR': 21,
+ 'VAL': 22,
+ 'XAA': 23,
+ 'XLE': 24,
+ 'others': 25}
 acids2int_200 = {'0ZZ': 0,
  '1KU': 1,
  '1KY': 2,
@@ -574,7 +600,7 @@ labels2idx = {"4.2.1.10": 0, "6.5.1.1": 1, "4.2.3.1": 2, "2.7.7.48": 3, "3.1.3.2
 
 class Enzymes(Dataset):
     def __init__(self, path="/mnt/ssd/datasets/enzyme/min_dfs_transformer_preprocessed_n200_dleq4.5.pkl", 
-                 n_edge_types=8, acids2int=acids2int_200):
+                 n_edge_types=8, acids2int=acids2int):
         # default edge types:
         # 0: <4
         # 1: <5
