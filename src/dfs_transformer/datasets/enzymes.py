@@ -599,7 +599,7 @@ labels2idx = {"4.2.1.10": 0, "6.5.1.1": 1, "4.2.3.1": 2, "2.7.7.48": 3, "3.1.3.2
 
 
 class Enzymes(Dataset):
-    def __init__(self, path="/mnt/ssd/datasets/enzyme/min_dfs_transformer_preprocessed_n200_dleq4.5.pkl", 
+    def __init__(self, path="/mnt/ssd/datasets/enzyme/restrictive_n200_dleq4.5.pkl", 
                  n_edge_types=8, acids2int=acids2int):
         # default edge types:
         # 0: <4
@@ -622,7 +622,6 @@ class Enzymes(Dataset):
             graphs = pickle.load(f)
             
         for name, d in graphs.items():
-            
             node_features = F.one_hot(torch.tensor(d['node_types'], dtype=torch.long), 
                                       num_classes=len(self.acids2int)).float()
                                       
