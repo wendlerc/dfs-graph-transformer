@@ -17,7 +17,7 @@ from torchdistill.core.forward_hook import ForwardHookManager
 class DFSCodeEncoder(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 
                  emb_dim=120, nhead=12, nlayers=6, dim_feedforward=2048, 
-                 max_nodes=250, max_edges=500, dropout=0.1, missing_value=None):
+                 max_nodes=250, max_edges=500, dropout=0.1, missing_value=None, **kwargs):
         super().__init__()
         self.ninp = emb_dim * 5
         self.emb_dfs = PositionalEncoding(emb_dim, dropout=0, max_len=max_nodes)
