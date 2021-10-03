@@ -24,8 +24,9 @@ if __name__ == "__main__":
     parser.add_argument('--yaml', type=str, default="./config/selfattn/bert.yaml") 
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--loops', dest='loops', action='store_true')
+    parser.add_argument('--no_features', dest='no_features', action='store_true')
     parser.add_argument('--overwrite', type=json.loads, default="{}")
-    parser.set_defaults(loops=False)
+    parser.set_defaults(loops=False, no_features=False)
     args = parser.parse_args()
     
     with open(args.yaml) as file:
@@ -39,6 +40,13 @@ if __name__ == "__main__":
     
     if config.model.use_loops:
         config.model.max_edges += config.model.max_nodes
+        
+    if args.no_features:
+        config.model.n_node_features = 118
+        config.model.n_edge_features = 5
+        config.model["no_features"] = True
+    else:
+        config.model["no_features"] = False
     
     wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
     run = wandb.init(mode=args.wandb_mode, 
@@ -86,7 +94,7 @@ if __name__ == "__main__":
     
     validloader = None
     if d.valid_path is not None:
-        validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges)
+        validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges, noFeatures=m.no_features)
         validloader = DataLoader(validset, batch_size=t.batch_size, shuffle=True, 
                                  pin_memory=False, collate_fn=collate_fn)
         exclude = validset.smiles
@@ -105,7 +113,7 @@ if __name__ == "__main__":
             print('starting epoch %d'%(epoch+1))
             for split in range(n_splits):
                 dataset = PubChem(d.path, n_used = d.n_used, max_nodes=m.max_nodes, 
-                                  max_edges=m.max_edges, exclude=exclude)
+                                  max_edges=m.max_edges, exclude=exclude, noFeatures=m.no_features)
                 loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
                                     pin_memory=False, collate_fn=collate_fn)
                 trainer.loader = loader

@@ -6,13 +6,14 @@ import glob
 import torch
 import tqdm
 from .utils import get_n_files
+import torch.nn.functional as F
 
 
 class PubChem(Dataset):
     """PubChem dataset of molecules and minimal DFS codes."""
     def __init__(self, path, n_used = None, n_splits = None, max_nodes=np.inf,
                  max_edges=np.inf, useHs=False, addLoops=False, memoryEfficient=False,
-                 transform=None, exclude=[]):
+                 transform=None, exclude=[], noFeatures=False):
         """
         Parameters
         ----------
@@ -42,6 +43,7 @@ class PubChem(Dataset):
         self.max_nodes = max_nodes
         self.max_edges = max_edges
         self.exclude = set(exclude)
+        self.noFeatures = noFeatures
         self.prepare()
         
         
@@ -75,14 +77,22 @@ class PubChem(Dataset):
                 
                 z = torch.tensor(d['z'], dtype=torch.long)
                 
+                if self.noFeatures:
+                    node_features = F.one_hot(z - 1, num_classes=118).float() #-1 because H has atomic number 1
+                    edge_features = torch.tensor(d['edge_attr'], dtype=torch.float)
+                else:
+                    node_features = torch.tensor(d['atom_features'], dtype=torch.float32)
+                    edge_features = torch.tensor(d['bond_features'], dtype=torch.float32)
+                
+                
                 data_ = Data(z=z,
                              edge_attr=torch.tensor(d['edge_attr']),
                              edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
                              min_dfs_code=torch.tensor(code['min_dfs_code']),
                              min_dfs_index=torch.tensor(code['dfs_index'], dtype=torch.long),
                              smiles=smiles,
-                             node_features=torch.tensor(d['atom_features'], dtype=torch.float32),
-                             edge_features=torch.tensor(d['bond_features'], dtype=torch.float32))
+                             node_features=node_features,
+                             edge_features=edge_features)
                 self.data += [data_]   
                 self.smiles += [smiles]
         
