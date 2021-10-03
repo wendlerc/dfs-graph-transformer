@@ -21,7 +21,9 @@ class Trainer():
                  scorer=None, optimizer=torch.optim.Adam,
                  n_epochs=1000, accumulate_grads=1, lr=0.0003, lr_patience=5, 
                  lr_adjustment_period=500, decay_factor=0.8, minimal_lr=6e-8, 
-                 lr_argument = lambda log: log['loss'], gpu_id=0, es_improvement=0.0, 
+                 lr_argument = lambda log: log['loss'],
+                 es_argument = None,
+                 gpu_id=0, es_improvement=0.0, 
                  es_patience=100, es_path=None, es_period=1000, wandb_run = None, 
                  adam_betas=(0.9,0.98), adam_eps=1e-9, param_groups=None, **kwargs):
         """
@@ -55,6 +57,7 @@ class Trainer():
             self.es_path = "./models/tmp/%d/"%np.random.randint(100000)
         else:
             self.es_path = es_path
+        self.es_argument = es_argument
         self.wandb = wandb_run 
         
         if param_groups is not None:
@@ -154,9 +157,15 @@ class Trainer():
                                         pbar_string += " %2.4f"%res
                                     pbar_valid.set_description(pbar_string)
                                 self.wandb.log(valid_log)
-                            self.early_stopping(valid_loss, model)
+                            if self.es_argument is None:
+                                self.early_stopping(valid_loss, model)
+                            else: 
+                                self.early_stopping(self.es_argument(valid_log), model)
                         else:
-                            self.early_stopping(epoch_loss, model)
+                            if self.es_argument is None:
+                                self.early_stopping(epoch_loss, model)
+                            else: 
+                                self.early_stopping(self.es_argument(log), model)
                         
                         if self.early_stopping.early_stop:
                             self.stop_training = True
