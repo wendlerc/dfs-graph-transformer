@@ -6,7 +6,7 @@ Created on Tue Oct  5 13:54:36 2021
 @author: chrisw
 """
 
-from deepchem.models.torch_models import MPNN
+from deepchem.models.torch_models import MPNN, GCN
 import torch
 import torch.nn as nn
 import dgl
@@ -61,5 +61,40 @@ class Gilmer(nn.Module):
             return self.mpnn(g)
             
         
+
+class Kipf(nn.Module):
+    def __init__(self,
+               n_tasks: int = 1,
+               graph_conv_layers: list = None,
+               activation=None,
+               residual: bool = True,
+               batchnorm: bool = False,
+               dropout: float = 0.,
+               predictor_hidden_feats: int = 128,
+               predictor_dropout: float = 0.,
+               mode: str = 'regression',
+               number_atom_features: int = 30,
+               n_classes: int = 2,
+               nfeat_name: str = 'x',
+               **kwargs):
+        super().__init__()
+        self.gcn = GCN(n_tasks=n_tasks,
+                       graph_conv_layers=graph_conv_layers,
+                       activation=activation,
+                       residual=residual,
+                       batchnorm=batchnorm,
+                       dropout=dropout,
+                       predictor_hidden_feats=predictor_hidden_feats,
+                       predictor_dropout=predictor_dropout,
+                       mode=mode,
+                       number_atom_features=number_atom_features,
+                       n_classes=n_classes,
+                       nfeat_name=nfeat_name)
     
+    def forward(self, g):
+        if self.gcn.mode == "classification":
+            return self.gcn(g)[1]
+        else:
+            return self.gcn(g)
+        
         
