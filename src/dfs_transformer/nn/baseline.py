@@ -12,14 +12,22 @@ import torch.nn as nn
 import dgl
 
 
-def collate_dgl(dlist, node_feats, edge_feats, target):
+def collate_dgl(dlist, node_feats, edge_feats, target, add_self_loop=False):
     dglbatch = []
     targetbatch = []
     for d in dlist:
         edge_index = d.edge_index.clone()
-        g = dgl.graph((edge_index[0], edge_index[1]))
+        g = dgl.graph((edge_index[0], edge_index[1]), num_nodes=len(d[node_feats]))
+        if add_self_loop:
+            g = dgl.add_self_loop(g)
+        #print(g)
+        #print(d[node_feats].shape)
+        #print(d[edge_feats].shape)
         g.ndata['x'] = d[node_feats].clone()
-        g.edata['edge_attr'] = d[edge_feats].clone()
+        if edge_feats is not None:
+            g.edata['edge_attr'] = d[edge_feats].clone()
+        
+        
         targetbatch.append(d[target])
         dglbatch += [g]
     dglbatch = dgl.batch(dglbatch)

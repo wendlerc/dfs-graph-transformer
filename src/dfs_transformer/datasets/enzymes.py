@@ -627,14 +627,22 @@ class Enzymes(Dataset):
                                       
             edge_features = F.one_hot(torch.tensor(d['edge_types'], dtype=torch.long), 
                                       num_classes=self.n_edge_types).float()
-            self.data += [Data(name=name, 
-                               edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
-                               node_features=node_features,
-                               edge_features=edge_features, 
-                               min_dfs_code=torch.tensor(d['min_dfs_code']),
-                               min_dfs_index=torch.tensor(d['min_dfs_index']), dtype=torch.long,
-                               y = labels2idx[d['label']],
-                               split = d['split'])]
+            if 'min_dfs_code' in d:
+                self.data += [Data(name=name, 
+                                   edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
+                                   node_features=node_features,
+                                   edge_features=edge_features, 
+                                   min_dfs_code=torch.tensor(d['min_dfs_code']),
+                                   min_dfs_index=torch.tensor(d['min_dfs_index']), dtype=torch.long,
+                                   y = labels2idx[d['label']],
+                                   split = d['split'])]
+            else:
+                self.data += [Data(name=name, 
+                                   edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
+                                   node_features=node_features,
+                                   edge_features=edge_features, 
+                                   y = labels2idx[d['label']],
+                                   split = d['split'])]
             
     def __len__(self):
         return len(self.data)
