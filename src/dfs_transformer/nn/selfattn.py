@@ -179,6 +179,12 @@ class DFSCodeSeq2SeqFC(nn.Module):
             fmean = torch.mean(self_attn, dim=0)
             fmax = torch.max(self_attn, dim=0)[0]
             features = torch.cat((fmin, fmean, fmax), dim=1)
+        elif method == "min-mean-max-std":
+            fmin = torch.min(self_attn, dim=0)[0]
+            fmean = torch.mean(self_attn, dim=0)
+            fmax = torch.max(self_attn, dim=0)[0]
+            fstd = torch.std(self_attn, dim=0)
+            features = torch.cat((fmin, fmean, fmax, fstd), dim=1)
         elif method == "max-of-cls":
             features = torch.max(self_attn[:ncls], dim=0)[0]
         elif method == "mean-of-cls":
@@ -205,6 +211,8 @@ class DFSCodeSeq2SeqFC(nn.Module):
             return ncls * self.ninp + 2*self.ninp
         elif method == "min-mean-max":
             return 3*self.ninp
+        elif method == "min-mean-max-std":
+            return 4*self.ninp
         elif method == "max-mean-of-cls":
             return 2*self.ninp
         elif int(method) < ncls:
@@ -280,6 +288,12 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
             fmean = torch.mean(self_attn, dim=0)
             fmax = torch.max(self_attn, dim=0)[0]
             features = torch.cat((fmin, fmean, fmax), dim=1)
+        elif method == "min-mean-max-std":
+            fmin = torch.min(self_attn, dim=0)[0]
+            fmean = torch.mean(self_attn, dim=0)
+            fmax = torch.max(self_attn, dim=0)[0]
+            fstd = torch.std(self_attn, dim=0)
+            features = torch.cat((fmin, fmean, fmax, fstd), dim=1)
         elif method == "max-of-cls":
             features = torch.max(self_attn[:ncls], dim=0)[0]
         elif method == "mean-of-cls":
@@ -302,6 +316,8 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
             return ncls * self.ninp + 2*self.ninp
         elif method == "min-mean-max":
             return 3*self.ninp
+        elif method == "min-mean-max-std":
+            return 4*self.ninp
         elif method == "max-mean-of-cls":
             return 2*self.ninp
         elif int(method) < ncls:
