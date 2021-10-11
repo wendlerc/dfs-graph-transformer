@@ -91,7 +91,7 @@ class Deepchem2TorchGeometric(Dataset):
                 node_features = d['atom_features']
                 edge_features = d['bond_features']
             else:#no features
-                node_features = nn.functional.one_hot(z, num_classes=118).float()
+                node_features = nn.functional.one_hot(z-1, num_classes=118).float()
                 edge_features = d['edge_attr']
                 
                 
