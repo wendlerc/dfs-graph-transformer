@@ -12,6 +12,7 @@ import logging
 from sacred import Experiment
 import dfs_code
 import glob
+import os
 import tqdm
 
 exp = Experiment('compute min dfs codes')
