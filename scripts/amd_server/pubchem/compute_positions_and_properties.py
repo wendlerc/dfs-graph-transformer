@@ -3,7 +3,7 @@ import tqdm
 import glob
 import sys
 sys.path = ['./src'] + sys.path
-from dfs_transformer import smiles2properties, smiles2positions
+from dfs_transformer.datasets.utils import smiles2properties, smiles2positions
 import logging
 from sacred import Experiment
 
