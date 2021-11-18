@@ -1,15 +1,9 @@
 import pickle
-import numpy as np
-import torch
-import pandas as pd
 import tqdm
-from torch.utils.data import Dataset, DataLoader
 import glob
-import dfs_code
-from torch_geometric.data import InMemoryDataset, Data
 import sys
 sys.path = ['./src'] + sys.path
-from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, smiles2graph, smiles2properties, smiles2positions
+from dfs_transformer import smiles2properties, smiles2positions
 import logging
 from sacred import Experiment
 
@@ -20,16 +14,12 @@ def cfg(_log):
     nr = 0
     total = 10
     n_splits = 64
-    max_nodes = np.inf
-    max_edges = np.inf
-    time_limit = 60
     log_level = logging.INFO
     use_Hs = False
-    add_loops = False
     path = "../../results/pubchem/amd-server/noH/timeout60_4"
 
 @exp.automain
-def main(path, n_splits, nr, total, max_nodes, max_edges, time_limit, log_level, use_Hs, add_loops, _run, _log):
+def main(path, n_splits, nr, total, log_level, use_Hs, _run, _log):
     logging.basicConfig(level=log_level)
     for i in range(n_splits):
         if i % total == nr:
