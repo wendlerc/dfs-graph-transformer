@@ -16,6 +16,13 @@ from rdkit import Chem
 from rdkit.Chem.rdchem import HybridizationType
 from rdkit.Chem.rdchem import BondType as BT
 from rdkit import RDLogger
+from rdkit.Chem import AllChem
+
+from rdkit.Chem.QED import qed
+from rdkit.Chem import rdMolDescriptors
+from rdkit.Chem import rdmolops
+
+
 RDLogger.DisableLog('rdApp.*')
 import networkx as nx
 from chemprop.features.featurization import atom_features, bond_features
@@ -123,6 +130,84 @@ def collate_smiles_y(dlist):
         edge_attr_batch += [d.edge_attr.numpy()]
         y_batch += [d.y]
     return smiles_batch, z_batch, edge_attr_batch, torch.cat(y_batch)
+
+
+def smiles2properties(smiles, useHs=False):
+    mol = Chem.MolFromSmiles(smiles)
+    if useHs:
+        mol = Chem.rdmolops.AddHs(mol)
+    names = []
+    values = []
+    names += ["rdmolops.GetFormalCharge"]
+    names += ["qed"]
+    names += ["rdMolDescriptors.CalcNumAliphaticCarbocycles"]
+    names += ["rdMolDescriptors.CalcNumAliphaticHeterocycles"]
+    names += ["rdMolDescriptors.CalcNumAliphaticRings"]
+    names += ["rdMolDescriptors.CalcNumAmideBonds"]
+    names += ["rdMolDescriptors.CalcNumAromaticCarbocycles"]
+    names += ["rdMolDescriptors.CalcNumAromaticHeterocycles"]
+    names += ["rdMolDescriptors.CalcNumAromaticRings"]
+    names += ["rdMolDescriptors.CalcNumAtomStereoCenters"]
+    #names += ["rdMolDescriptors.CalcNumAtoms"]
+    names += ["rdMolDescriptors.CalcNumBridgeheadAtoms"]
+    names += ["rdMolDescriptors.CalcNumHBA"]
+    names += ["rdMolDescriptors.CalcNumHBD"]
+    #names += ["rdMolDescriptors.CalcNumHeavyAtoms"]
+    names += ["rdMolDescriptors.CalcNumHeteroatoms"]
+    names += ["rdMolDescriptors.CalcNumHeterocycles"]
+    names += ["rdMolDescriptors.CalcNumLipinskiHBA"]
+    names += ["rdMolDescriptors.CalcNumLipinskiHBD"]
+    names += ["rdMolDescriptors.CalcNumRings"]
+    names += ["rdMolDescriptors.CalcNumRotatableBonds"]
+    names += ["rdMolDescriptors.CalcNumSaturatedCarbocycles"]
+    names += ["rdMolDescriptors.CalcNumSaturatedHeterocycles"]
+    names += ["rdMolDescriptors.CalcNumSaturatedRings"]
+    names += ["rdMolDescriptors.CalcNumSpiroAtoms"]
+    names += ["rdMolDescriptors.CalcNumUnspecifiedAtomStereoCenters"]
+    names += ["rdMolDescriptors.CalcPBF"]
+    names += ["rdMolDescriptors.CalcPMI1"]
+    names += ["rdMolDescriptors.CalcPMI2"]
+    names += ["rdMolDescriptors.CalcPMI3"]
+    names += ["rdMolDescriptors.CalcPhi"]
+    #names += ["rdMolDescriptors.CalcRDF"]
+    names += ["rdMolDescriptors.CalcRadiusOfGyration"]
+    names += ["rdMolDescriptors.CalcSpherocityIndex"]
+    names += ["rdMolDescriptors.CalcTPSA"]
+    names += ["rdMolDescriptors.CalcAsphericity"]
+    #names += ["rdMolDescriptors.CalcChi0n"]
+    names += ["rdMolDescriptors.CalcChi0v"]
+    #names += ["rdMolDescriptors.CalcChi1n"]
+    names += ["rdMolDescriptors.CalcChi1v"]
+    #names += ["rdMolDescriptors.CalcChi2n"]
+    names += ["rdMolDescriptors.CalcChi2v"]
+    #names += ["rdMolDescriptors.CalcChi3n"]
+    names += ["rdMolDescriptors.CalcChi3v"]
+    #names += ["rdMolDescriptors.CalcChi4n"]
+    names += ["rdMolDescriptors.CalcChi4v"]
+    #names += ["rdMolDescriptors.CalcChiNn"]
+    #names += ["rdMolDescriptors.CalcChiNv"]
+    names += ["rdMolDescriptors.CalcEccentricity"]
+    names += ["rdMolDescriptors.CalcExactMolWt"]
+    names += ["rdMolDescriptors.CalcFractionCSP3"]
+    names += ["rdMolDescriptors.CalcHallKierAlpha"]
+    names += ["rdMolDescriptors.CalcInertialShapeFactor"]
+    names += ["rdMolDescriptors.CalcKappa1"]
+    names += ["rdMolDescriptors.CalcKappa2"]
+    names += ["rdMolDescriptors.CalcKappa3"]
+    names += ["rdMolDescriptors.CalcLabuteASA"]
+    names += ["rdMolDescriptors.CalcNPR1"]
+    names += ["rdMolDescriptors.CalcNPR2"]
+    for name in names:
+        values += [eval(name+"(mol)")]
+    return names, values
+
+
+def smiles2positions(smiles, useHs=False):
+    mol = Chem.MolFromSmiles(smiles)
+    if useHs:
+        mol = Chem.rdmolops.AddHs(mol)
+    AllChem.EmbedMolecule(mol)
+    return torch.tensor(mol.GetConformer(0).GetPositions())
 
 
 def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np.inf):
