@@ -13,7 +13,8 @@ class PubChem(Dataset):
     """PubChem dataset of molecules and minimal DFS codes."""
     def __init__(self, path, n_used = None, n_splits = None, max_nodes=np.inf,
                  max_edges=np.inf, useHs=False, addLoops=False, memoryEfficient=False,
-                 transform=None, exclude=[], noFeatures=False):
+                 transform=None, exclude=[], noFeatures=False,
+                 molecular_properties=None):
         """
         Parameters
         ----------
@@ -25,7 +26,7 @@ class PubChem(Dataset):
         max_nodes : The default is np.inf.
         max_edges : The default is np.inf.
         n_mols_per_dataset : int, number of molecules to process per split. The default is np.inf.
-
+        molecular_properties: list, list of names of molecular properties to load
         """
         self.path = path
         self.data = []
@@ -44,17 +45,20 @@ class PubChem(Dataset):
         self.max_edges = max_edges
         self.exclude = set(exclude)
         self.noFeatures = noFeatures
+        self.molecular_properties = molecular_properties
         self.prepare()
         
         
     def prepare(self):
         codes_all = {}
         d_all = {}
+        props_all = {}
         perm = np.random.permutation(self.n_splits)
         for i in tqdm.tqdm(perm[:self.n_used]):
             dname = glob.glob(self.path+"/%d/min_dfs_codes_split*.pkl"%(i+1))[0]
             didx = int(dname.split("split")[-1][:-4])
             dname2 = self.path+"/%d/data_split%d.pkl"%(i+1, didx)
+            
             with open(dname, 'rb') as f:
                 codes = pickle.load(f)
                 for key, val in codes.items():
@@ -66,8 +70,20 @@ class PubChem(Dataset):
                 for key, val in d_dict.items():
                     if key not in self.exclude:
                         d_all[key] = val
+            
+            if self.molecular_properties is not None:
+                dname3 = self.path+"/%d/properties_normalized_split%d.pkl"%(i+1, didx)
+                with open(dname3, 'rb') as f:
+                    p_dict = pickle.load(f)
+                    for key, val in p_dict.items():
+                        if key not in self.exclude:
+                            props_all[key] = val
+                
         
         for smiles, code in tqdm.tqdm(codes_all.items()):
+            if self.molecular_properties is not None:
+                if smiles not in props_all:
+                    continue
             if code['min_dfs_code'] is not None and len(code['min_dfs_code']) > 1:
                 d = d_all[smiles]
                 if len(d['z']) > self.max_nodes:
@@ -84,15 +100,26 @@ class PubChem(Dataset):
                     node_features = torch.tensor(d['atom_features'], dtype=torch.float32)
                     edge_features = torch.tensor(d['bond_features'], dtype=torch.float32)
                 
-                
-                data_ = Data(z=z,
-                             edge_attr=torch.tensor(d['edge_attr']),
-                             edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
-                             min_dfs_code=torch.tensor(code['min_dfs_code']),
-                             min_dfs_index=torch.tensor(code['dfs_index'], dtype=torch.long),
-                             smiles=smiles,
-                             node_features=node_features,
-                             edge_features=edge_features)
+                if self.molecular_properties is not None:
+                    data_ = Data(z=z,
+                                 edge_attr=torch.tensor(d['edge_attr']),
+                                 edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
+                                 min_dfs_code=torch.tensor(code['min_dfs_code']),
+                                 min_dfs_index=torch.tensor(code['dfs_index'], dtype=torch.long),
+                                 smiles=smiles,
+                                 node_features=node_features,
+                                 edge_features=edge_features,
+                                 properties={name:props_all[smiles][name] for name in self.molecular_properties})
+                else:
+                    data_ = Data(z=z,
+                                 edge_attr=torch.tensor(d['edge_attr']),
+                                 edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
+                                 min_dfs_code=torch.tensor(code['min_dfs_code']),
+                                 min_dfs_index=torch.tensor(code['dfs_index'], dtype=torch.long),
+                                 smiles=smiles,
+                                 node_features=node_features,
+                                 edge_features=edge_features)
+                    
                 self.data += [data_]   
                 self.smiles += [smiles]
         

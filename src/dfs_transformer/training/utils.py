@@ -12,10 +12,13 @@ import numpy as np
 import dfs_code
 from chemprop.features.featurization import atom_features, bond_features
 from copy import deepcopy
+from collections import defaultdict
 
 
 def to_cuda(T, device):
-    if type(T) is list:
+    if type(T) is dict:
+        return {key: value.to(device) for key, value in T.items()}
+    elif type(T) is list:
         return [t.to(device) for t in T]
     else:
         return T.to(device)
@@ -85,6 +88,8 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
         node_batch = [] 
         edge_batch = []
         code_batch = []
+        if "properties" in dlist[0].keys:
+            prop_batch = defaultdict(list)
         if use_loops:
             loop = torch.tensor(bond_features(None)).unsqueeze(0)
         for d in dlist:
@@ -116,8 +121,15 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
             node_batch += [d.node_features.clone()]
             edge_batch += [edge_features]
             code_batch += [code]
+            if "properties" in dlist[0].keys:
+                for name, prop in d.properties.items():
+                    prop_batch[name] += [prop]
+                    
         inputs, outputs = BERTize(code_batch, fraction_missing=fraction_missing)
         targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1)
+        if "properties" in dlist[0].keys:
+            prop_batch = {name: torch.tensor(plist) for name, plist in prop_batch.items()}
+            return inputs, node_batch, edge_batch, targets, prop_batch
         return inputs, node_batch, edge_batch, targets 
     
     

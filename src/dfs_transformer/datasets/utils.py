@@ -25,7 +25,7 @@ from rdkit.Chem import rdmolops
 
 RDLogger.DisableLog('rdApp.*')
 import networkx as nx
-from chemprop.features.featurization import atom_features, bond_features
+from chemprop.features.featurization import atom_features, bond_features, onek_encoding_unk
 import dfs_code
 import glob
 
@@ -135,6 +135,7 @@ def smiles2properties(smiles, useHs=False):
     mol = Chem.MolFromSmiles(smiles)
     if useHs:
         mol = Chem.rdmolops.AddHs(mol)
+    AllChem.EmbedMolecule(mol)
     names = []
     values = []
     names += ["rdmolops.GetFormalCharge"]

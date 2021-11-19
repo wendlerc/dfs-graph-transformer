@@ -14,6 +14,22 @@ from einops import rearrange
 from torchdistill.core.forward_hook import ForwardHookManager
 
 
+class TransformerPlusHeads(nn.Module):
+    def __init__(self, encoder, head_specs):
+        """head_specs a dict specifying the heads"""
+        super(TransformerPlusHeads, self).__init__()
+        self.encoder = encoder
+        self.ninp = self.encoder.ninp 
+        self.encoder.return_features = True
+        self.head_specs = head_specs
+        self.head_dict = nn.ModuleDict({name.replace(".", "_"): nn.Linear(self.ninp* self.encoder.n_class_tokens, n_output) for name, n_output in head_specs.items()})
+            
+    def forward(self, C, N, E):
+        dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, features = self.encoder(C, N, E)
+        property_predictions = {name.replace("_", "."): head(features) for name, head in self.head_dict.items()}
+        return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, property_predictions
+    
+
 class DFSCodeEncoder(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 
                  emb_dim=120, nhead=12, nlayers=6, dim_feedforward=2048, 
@@ -97,7 +113,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
                  n_atoms, n_bonds, emb_dim=120, nhead=12, 
                  nlayers=6, n_class_tokens=1, dim_feedforward=2048, 
                  max_nodes=250, max_edges=500, dropout=0.1, 
-                 missing_value=None, **kwargs):
+                 missing_value=None, return_features=False, **kwargs):
         super().__init__()
         self.nlayers = nlayers
         self.ninp = emb_dim * 5
@@ -114,6 +130,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
         self.fc_atom1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
         self.fc_atom2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
         self.fc_bond = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_bonds)
+        self.return_features = return_features
         
         
         self.cls_token = nn.Parameter(torch.empty(n_class_tokens, 1, self.ninp), requires_grad=True)
@@ -133,6 +150,10 @@ class DFSCodeSeq2SeqFC(nn.Module):
         atom1_logits = self.fc_atom1(batch)
         atom2_logits = self.fc_atom2(batch)
         bond_logits = self.fc_bond(batch)
+        if self.return_features:
+            features = self_attn[:self.n_class_tokens]
+            features = rearrange(features, 'd0 d1 d2 -> d1 (d0 d2)')
+            return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, features
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
     def encode(self, C, N, E, method="cls"):
@@ -324,5 +345,7 @@ class DFSCodeSeq2SeqFCFeatures(nn.Module):
             return self.ninp
         else:
             raise ValueError("unsupported method")
+            
+
         
 

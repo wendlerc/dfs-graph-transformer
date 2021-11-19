@@ -1,0 +1,23 @@
+n_used: null # set this to 4 if you use the 10M and null otherwise 
+n_iter_per_split: 1000 # the data is split in the preprocessing step into n shards,
+    # n_used determines how many of these shards to process at once and n_iter_per_split 
+    # determines how many passes to do over this split
+path: "./results/pubchem/noH/1M/"
+valid_path: "./results/pubchem/noH/validation/"
+batch_size: 50
+    
+
+    
+
+    
+    
+    
+    
+    
+
+    
+    
+
+
+
+
