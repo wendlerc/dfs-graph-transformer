@@ -68,7 +68,7 @@ class TrainerNew():
             self.optim = self.optimizer(model.parameters(), betas=adam_betas, eps=adam_eps, lr=self.lr)
         self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(self.optim, 
                                                               lr_lambda = lambda t: min(1/((t+1)**0.5), (t+1)*(1/(self.lr_warmup**1.5))), 
-                                                              verbose = True)
+                                                              verbose = False)
         self.model = self.model.to(self.device)
         os.makedirs(self.es_path, exist_ok=True)
         self.early_stopping = EarlyStopping(patience=es_patience, delta=es_improvement, path=self.es_path+'checkpoint.pt')
@@ -105,14 +105,15 @@ class TrainerNew():
                         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                         optim.step() 
                         lr_scheduler.step()
-                    epoch_loss = (epoch_loss*i + loss.item())/(i+1)
+                    loss = loss.item()
+                    epoch_loss = (epoch_loss*i + loss)/(i+1)
                     log['batch-loss'] = loss
                     log['loss'] = epoch_loss
                     
                     pbar_string = "Epoch %d: loss %2.6f"%(epoch+1, epoch_loss)
                     for name, metric in self.metrics.items():
-                        res = metric(pred, outputs)
-                        epoch_metric[name] = (epoch_metric[name]*i + res.item())/(i+1)
+                        res = metric(pred, outputs).item()
+                        epoch_metric[name] = (epoch_metric[name]*i + res)/(i+1)
                         log['batch-'+name] = res
                         log[name] = epoch_metric[name]
                         pbar_string += " %2.4f"%res
@@ -121,12 +122,15 @@ class TrainerNew():
                     log['learning rate'] = curr_lr
                     pbar.set_description(pbar_string)
                     self.wandb.log(log)
+                    del inputs
+                    del outputs
+                    del data
                             
                     if (step + 1) % self.es_period == 0:
                         self.model.eval()
                         if self.scorer is not None:
                             with torch.no_grad():
-                                score = self.scorer(model)
+                                score = self.scorer(model).item()
                             self.early_stopping(-score, model)
                             self.wandb.log({"valid-score": score})
                             
@@ -141,13 +145,13 @@ class TrainerNew():
                                     inputs = [data[i] for i in self.input_idxs]
                                     outputs = [data[i] for i in self.output_idxs]
                                     pred = self.model(*inputs)
-                                    loss = self.loss(pred, outputs)
-                                    valid_loss = (valid_loss*i + loss.item())/(i+1)
+                                    loss = self.loss(pred, outputs).item()
+                                    valid_loss = (valid_loss*i + loss)/(i+1)
                                     valid_log['valid-loss'] = valid_loss
                                     pbar_string = "Valid %d: loss %2.6f"%(epoch+1, valid_loss)
                                     for name, metric in self.metrics.items():
-                                        res = metric(pred, outputs)
-                                        valid_metric[name] = (valid_metric[name]*i + res.item())/(i+1)
+                                        res = metric(pred, outputs).item()
+                                        valid_metric[name] = (valid_metric[name]*i + res)/(i+1)
                                         valid_log['valid-'+name] = valid_metric[name]
                                         pbar_string += " %2.4f"%res
                                     pbar_valid.set_description(pbar_string)
@@ -161,6 +165,10 @@ class TrainerNew():
                                 self.early_stopping(epoch_loss, model)
                             else: 
                                 self.early_stopping(self.es_argument(log), model)
+                        del valid_log
+                        del inputs
+                        del outputs
+                        del data
                         
                         # END CONDITIONS
                         if self.early_stopping.early_stop or curr_lr < self.minimal_lr:
@@ -169,6 +177,7 @@ class TrainerNew():
                         
                     step += 1
                 self.wandb.log({'train-'+key: value for key, value in log.items() if (key == 'loss' or key in self.metrics.keys())})
+                del log
                     
         except KeyboardInterrupt:
             torch.save(model.state_dict(), self.es_path+'checkpoint_keyboardinterrupt.pt')

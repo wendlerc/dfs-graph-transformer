@@ -16,6 +16,7 @@ from ml_collections import ConfigDict
 from copy import deepcopy
 import pickle
 from sklearn.metrics import r2_score
+#torch.multiprocessing.set_sharing_strategy('file_system')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_project', type=str, default="pubchem_plus_properties")
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--yaml_model', type=str, default="./config/selfattn/model/bert.yaml") 
-    parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem1M.yaml")
+    parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem10K.yaml")
     parser.add_argument('--yaml_training', type=str, default="./config/selfattn/training/min2min_new.yaml")
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--loops', dest='loops', action='store_true')
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     with open(args.yaml_training) as file:
         config.training = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
-    config.data.molecular_properties = ["qed", "rdMolDescriptors.CalcNumHeteroatoms"]
+    config.data.molecular_properties = None #["qed", "rdMolDescriptors.CalcNumHeteroatoms"]
     
     config.model.use_loops = args.loops
 
@@ -58,6 +59,11 @@ if __name__ == "__main__":
     else:
         config.model["no_features"] = False
     
+    with open(config.data.path+"/properties_aggr.pkl", "rb") as f:
+        prop_aggr = pickle.load(f)
+    if config.data.molecular_properties is None:
+        config.data.molecular_properties = list(prop_aggr.keys())
+    
     wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
     run = wandb.init(mode=args.wandb_mode, 
                      project=args.wandb_project, 
@@ -67,13 +73,12 @@ if __name__ == "__main__":
     m = deepcopy(config.model)
     t = deepcopy(config.training)
     d = deepcopy(config.data)
-    with open(d.path+"/properties_aggr.pkl", "rb") as f:
-        prop_aggr = pickle.load(f)
-    print(prop_aggr)
+    
     print(config)
     device = torch.device('cuda:%d'%config.training.gpu_id if torch.cuda.is_available() else 'cpu')
     
     ce = nn.CrossEntropyLoss(ignore_index=-1)
+    mse = nn.MSELoss()
     loss_old = functools.partial(seq_loss, ce=ce, m=m)
     loss_old_wrapped = lambda preds, outputs: loss_old(preds[:5], outputs[0])
     def property_loss(preds, outputs):
@@ -87,7 +92,7 @@ if __name__ == "__main__":
             if aggr['is_int']:
                 loss += ce(pred, gt)
             else:
-                loss += torch.mean((pred - gt)**2)
+                loss += mse(pred[:, 0], gt.float())
         return loss
     
     def property_score(preds, outputs, key):
@@ -151,7 +156,7 @@ if __name__ == "__main__":
         validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges, noFeatures=m.no_features,
                            molecular_properties=d.molecular_properties)
         validloader = DataLoader(validset, batch_size=t.batch_size, shuffle=True, 
-                                 pin_memory=False, collate_fn=collate_fn)
+                                 pin_memory=False, collate_fn=collate_fn, num_workers=t.num_workers)
         exclude = validset.smiles
     
     trainer = TrainerNew(model, None, loss, validloader=validloader, metrics=metrics, 
@@ -171,7 +176,7 @@ if __name__ == "__main__":
                                   max_edges=m.max_edges, exclude=exclude, noFeatures=m.no_features,
                                   molecular_properties=d.molecular_properties)
                 loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
-                                    pin_memory=False, collate_fn=collate_fn)
+                                    pin_memory=False, collate_fn=collate_fn, num_workers=t.num_workers)
                 trainer.loader = loader
                 trainer.fit()
                 if trainer.stop_training:

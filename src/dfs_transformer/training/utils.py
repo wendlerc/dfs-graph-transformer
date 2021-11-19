@@ -98,7 +98,7 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
             
             if mode == "min2min":
                 code = d.min_dfs_code.clone()
-                index = d.min_dfs_index
+                index = d.min_dfs_index.clone()
             elif mode == "rnd2rnd":
                 rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
                                                                          d.z.numpy().tolist(), 
@@ -128,7 +128,7 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
         inputs, outputs = BERTize(code_batch, fraction_missing=fraction_missing)
         targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1)
         if "properties" in dlist[0].keys:
-            prop_batch = {name: torch.tensor(plist) for name, plist in prop_batch.items()}
+            prop_batch = {name: torch.tensor(deepcopy(plist)) for name, plist in prop_batch.items()}
             return inputs, node_batch, edge_batch, targets, prop_batch
         return inputs, node_batch, edge_batch, targets 
     

@@ -5,14 +5,14 @@ lr_warmup: 4000
 n_epochs: 1
 minimal_lr: 0.00000006
 batch_size: 50
-accumulate_grads: 20
+accumulate_grads: 3
 gpu_id: 0
 es_patience: 100
 es_improvement: 0.0
 pretrained_dir: null
 es_path: null
 load_last: True
-    
+num_workers: 0
 
     
     
