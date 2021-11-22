@@ -16,7 +16,7 @@ from collections import defaultdict
 import functools
 
 class TrainerNew():
-    def __init__(self, model, loader, loss, validloader=None, metrics={}, 
+    def __init__(self, model, loader, loss, validloader=None, metrics={}, metric_pbar_keys=None,
                  input_idxs = [0, 1, 2],
                  output_idxs = [3, 4],
                  scorer=None, optimizer=torch.optim.Adam,
@@ -37,6 +37,10 @@ class TrainerNew():
         self.validloader = validloader
         self.loss = loss
         self.metrics = metrics
+        if metric_pbar_keys is None:
+            self.metric_pbar_keys = list(metrics.keys())
+        else:
+            self.metric_pbar_keys = metric_pbar_keys
         self.scorer = scorer
         self.optimizer = optimizer
         self.n_epochs = n_epochs
@@ -116,7 +120,8 @@ class TrainerNew():
                         epoch_metric[name] = (epoch_metric[name]*i + res)/(i+1)
                         log['batch-'+name] = res
                         log[name] = epoch_metric[name]
-                        pbar_string += " %2.4f"%res
+                        if name in self.metric_pbar_keys:
+                            pbar_string += " %2.4f"%res
                     
                     curr_lr = list(optim.param_groups)[0]['lr']
                     log['learning rate'] = curr_lr
@@ -153,7 +158,8 @@ class TrainerNew():
                                         res = metric(pred, outputs).item()
                                         valid_metric[name] = (valid_metric[name]*i + res)/(i+1)
                                         valid_log['valid-'+name] = valid_metric[name]
-                                        pbar_string += " %2.4f"%res
+                                        if name in self.metric_pbar_keys:
+                                            pbar_string += " %2.4f"%res
                                     pbar_valid.set_description(pbar_string)
                                 self.wandb.log(valid_log)
                             if self.es_argument is None:

@@ -138,6 +138,8 @@ def collate_rnd2min(dlist, use_loops=False):
         edge_batch = []
         min_code_batch = []
         rnd_code_batch = []
+        if "properties" in dlist[0].keys:
+            prop_batch = defaultdict(list)
         if use_loops:
             loop = torch.tensor(bond_features(None)).unsqueeze(0)
         for d in dlist:
@@ -166,7 +168,13 @@ def collate_rnd2min(dlist, use_loops=False):
             edge_batch += [edge_features]
             min_code_batch += [min_code]
             rnd_code_batch += [rnd_code]
+            if "properties" in dlist[0].keys:
+                for name, prop in d.properties.items():
+                    prop_batch[name] += [prop]
         targets = nn.utils.rnn.pad_sequence(min_code_batch, padding_value=-1)
+        if "properties" in dlist[0].keys:
+            prop_batch = {name: torch.tensor(deepcopy(plist)) for name, plist in prop_batch.items()}
+            return rnd_code_batch, node_batch, edge_batch, targets, prop_batch
         return rnd_code_batch, node_batch, edge_batch, targets 
     
     

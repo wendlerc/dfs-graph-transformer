@@ -16,6 +16,9 @@ from ml_collections import ConfigDict
 from copy import deepcopy
 import pickle
 from sklearn.metrics import r2_score
+import resource
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (2*2048, rlimit[1]))
 #torch.multiprocessing.set_sharing_strategy('file_system')
 
 if __name__ == "__main__":
@@ -24,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_project', type=str, default="pubchem_plus_properties")
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--yaml_model', type=str, default="./config/selfattn/model/bert.yaml") 
-    parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem10K.yaml")
+    parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem1M.yaml")
     parser.add_argument('--yaml_training', type=str, default="./config/selfattn/training/min2min_new.yaml")
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--loops', dest='loops', action='store_true')
@@ -81,6 +84,7 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     loss_old = functools.partial(seq_loss, ce=ce, m=m)
     loss_old_wrapped = lambda preds, outputs: loss_old(preds[:5], outputs[0])
+    
     def property_loss(preds, outputs):
         gt_dict = outputs[1]
         pred_dict = preds[-1]
@@ -108,6 +112,24 @@ if __name__ == "__main__":
             score = r2_score(gt.numpy(), pred.numpy())
         return score
     
+    def property_score_mean(preds, outputs, classification=True):
+        gt_dict = outputs[1]
+        pred_dict = preds[-1]
+        
+        score = 0
+        total = 0
+        for key in gt_dict.keys():
+            gt = gt_dict[key].detach().cpu()
+            pred = pred_dict[key].detach().cpu()
+            aggr = prop_aggr[key]
+            if aggr['is_int'] and classification:
+                score += (np.argmax(pred.numpy(), axis=1) == gt.numpy()).sum()/len(pred)
+            if not aggr['is_int'] and not classification:
+                score += r2_score(gt.numpy(), pred.numpy())
+            total += 1
+        return score/total
+        
+    
     loss = lambda preds, outputs: loss_old_wrapped(preds, outputs) + property_loss(preds, outputs)
     
     if config.training.mode == "min2min":
@@ -131,6 +153,8 @@ if __name__ == "__main__":
     metrics = {field:functools.partial(seq_acc_wrapper, idx=idx) for idx, field in enumerate(fields)}
     for key in d.molecular_properties:
         metrics[key] = functools.partial(property_score, key=key)
+    metrics['mean_acc'] = functools.partial(property_score_mean, classification=True) 
+    metrics['mean_r2'] = functools.partial(property_score_mean, classification=False)
         
     encoder = DFSCodeSeq2SeqFC(**m)
     head_specs = {}
@@ -156,11 +180,12 @@ if __name__ == "__main__":
         validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges, noFeatures=m.no_features,
                            molecular_properties=d.molecular_properties)
         validloader = DataLoader(validset, batch_size=t.batch_size, shuffle=True, 
-                                 pin_memory=False, collate_fn=collate_fn, num_workers=t.num_workers)
+                                 pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
+                                 prefetch_factor=t.prefetch_factor)
         exclude = validset.smiles
     
     trainer = TrainerNew(model, None, loss, validloader=validloader, metrics=metrics, 
-                      wandb_run = run, **t)
+                         metric_pbar_keys=fields+["mean_acc", "mean_r2"], wandb_run = run, **t)
     trainer.n_epochs = d.n_iter_per_split
     
     n_files = get_n_files(d.path)
@@ -176,7 +201,8 @@ if __name__ == "__main__":
                                   max_edges=m.max_edges, exclude=exclude, noFeatures=m.no_features,
                                   molecular_properties=d.molecular_properties)
                 loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
-                                    pin_memory=False, collate_fn=collate_fn, num_workers=t.num_workers)
+                                    pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
+                                    prefetch_factor=t.prefetch_factor)
                 trainer.loader = loader
                 trainer.fit()
                 if trainer.stop_training:

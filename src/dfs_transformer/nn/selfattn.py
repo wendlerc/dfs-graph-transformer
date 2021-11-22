@@ -182,11 +182,6 @@ class DFSCodeSeq2SeqFC(nn.Module):
             features = torch.mean(self_attn[ncls:], dim=0)
         elif method == "max":
             features = torch.max(self_attn[ncls:], dim=0)[0]
-        elif method == "cls-mean-max":
-            fcls = self_attn[0]
-            fmean = torch.mean(self_attn[ncls:], dim=0)
-            fmax = torch.max(self_attn[ncls:], dim=0)[0]
-            features = torch.cat((fcls, fmean, fmax), dim=1)
         elif method == "cls-mmm":
             fmin = torch.min(self_attn, dim=0)[0]
             fmean = torch.mean(self_attn, dim=0)
@@ -228,8 +223,6 @@ class DFSCodeSeq2SeqFC(nn.Module):
             return self.ninp
         elif method == "cls-mmm":
             return ncls*self.ninp + 3*self.ninp
-        elif method == "cls-mean-max":
-            return ncls * self.ninp + 2*self.ninp
         elif method == "min-mean-max":
             return 3*self.ninp
         elif method == "min-mean-max-std":
