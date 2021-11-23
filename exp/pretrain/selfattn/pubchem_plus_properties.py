@@ -44,7 +44,7 @@ if __name__ == "__main__":
     with open(args.yaml_training) as file:
         config.training = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
-    config.data.molecular_properties = None #["qed", "rdMolDescriptors.CalcNumHeteroatoms"]
+    #config.data.molecular_properties = None #["qed", "rdMolDescriptors.CalcNumHeteroatoms"]
     
     config.model.use_loops = args.loops
 
