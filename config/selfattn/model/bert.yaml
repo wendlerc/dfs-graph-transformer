@@ -10,4 +10,6 @@ missing_value: -1
 n_node_features: 133
 n_edge_features: 14
 n_class_tokens: 1
+encoder_class: "DFSCodeEncoder"
+rescale_flag: true
      

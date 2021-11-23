@@ -117,7 +117,14 @@ if __name__ == "__main__":
     model_dir = model_at.download(root=t.wandb_dir+'/artifacts/%s/'%t.pretrained_model)
     run.finish()
 
-    m = config.model
+    model_yaml = model_dir+"/config.yaml"
+    if not os.path.isfile(model_yaml) or t.use_local_yaml:
+        model_yaml = t.pretrained_yaml
+    
+    with open(model_yaml) as file:
+        cfg = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
+    
+    m = cfg.model
     
     encoder = DFSCodeSeq2SeqFC(**m)
     head_specs = {}
@@ -137,14 +144,14 @@ if __name__ == "__main__":
     print('loaded pretrained model')
     
     if "use_min" not in args.overwrite.keys():
-        config["use_min"] = m.missing_value == -1
+        config["use_min"] = cfg.training.mode == 'min2min'# m.missing_value == -1
     
     if "use_loops" not in m:
         m.use_loops = False
     
     collate_fn = functools.partial(collate_downstream, use_loops=m.use_loops, use_min=t.use_min)
     
-    datasets = ['bbbp', 'clintox', 'tox21', 'hiv']
+    datasets = ['clintox', 'bbbp',  'tox21', 'hiv']
     
     for idx, dataset in enumerate(datasets):
         run = wandb.init(args.wandb_mode, 
@@ -180,6 +187,9 @@ if __name__ == "__main__":
         else:
             for i, data in enumerate(tqdm.tqdm(loader)):
                 smls, rndc, nfeat, efeat, y = data
+                #for c, e, n in zip(rndc, efeat, nfeat):
+                #    print(c.shape, e.shape, n.shape)
+
                 code = to_cuda(rndc)
                 feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
                 smiles += deepcopy(smls)
