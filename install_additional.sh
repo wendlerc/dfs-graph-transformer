@@ -4,4 +4,4 @@ pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.9.0+$CUDA.
 pip install torch-geometric --upgrade
 pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.9.0+$CUDA.html --upgrade
 pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.9.0+$CUDA.html --upgrade
-pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html --upgrade
+pip install dgl-$CUDA -f https://data.dgl.ai/wheels/repo.html --upgrade
