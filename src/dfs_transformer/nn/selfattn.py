@@ -207,7 +207,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
                  nlayers=6, n_class_tokens=1, dim_feedforward=2048, 
                  max_nodes=250, max_edges=500, dropout=0.1, 
                  missing_value=None, return_features=False, 
-                 encoder_class="DFSCodeEncoderConcat", **kwargs):
+                 encoder_class="DFSCodeEncoder", **kwargs):
         super().__init__()
         self.nlayers = nlayers
         self.n_class_tokens = n_class_tokens
