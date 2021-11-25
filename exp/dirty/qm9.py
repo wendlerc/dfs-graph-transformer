@@ -70,7 +70,7 @@ chemical_accuracy[11] = 0.050
 
 run = wandb.init(project='QM9-transformer', entity='chrisxx')
 config = wandb.config
-config.n_epochs = 1
+config.n_epochs = 1000
 config.minimal_lr = 6e-8
 config.target_idx = 7
 config.batch_size = 1000
