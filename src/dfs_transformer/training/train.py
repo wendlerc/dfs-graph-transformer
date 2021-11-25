@@ -137,30 +137,31 @@ class Trainer():
                             self.wandb.log({"valid-score": score})
                             
                         elif self.validloader is not None:
-                            valid_loss = 0
-                            valid_metric = defaultdict(float)
                             with torch.no_grad():
-                                pbar_valid = tqdm.tqdm(self.validloader)
-                                for i, data in enumerate(pbar_valid):
-                                    valid_log = {}
-                                    inputs = [to_cuda(d) for d in data[:-1]]
-                                    output = to_cuda(data[-1])
-                                    pred = self.model(*inputs)
-                                    loss = self.loss(pred, output)
-                                    valid_loss = (valid_loss*i + loss.item())/(i+1)
-                                    valid_log['valid-loss'] = valid_loss
-                                    pbar_string = "Valid %d: loss %2.6f"%(epoch+1, valid_loss)
-                                    for name, metric in self.metrics.items():
-                                        res = metric(pred, output)
-                                        valid_metric[name] = (valid_metric[name]*i + res.item())/(i+1)
-                                        valid_log['valid-'+name] = valid_metric[name]
-                                        pbar_string += " %2.4f"%res
-                                    pbar_valid.set_description(pbar_string)
-                                self.wandb.log(valid_log)
-                            if self.es_argument is None:
-                                self.early_stopping(valid_loss, model)
-                            else: 
-                                self.early_stopping(self.es_argument(valid_log), model)
+                                valid_loss = 0
+                                valid_metric = defaultdict(float)
+                                with torch.no_grad():
+                                    pbar_valid = tqdm.tqdm(self.validloader)
+                                    for i, data in enumerate(pbar_valid):
+                                        valid_log = {}
+                                        inputs = [to_cuda(d) for d in data[:-1]]
+                                        output = to_cuda(data[-1])
+                                        pred = self.model(*inputs)
+                                        loss = self.loss(pred, output)
+                                        valid_loss = (valid_loss*i + loss.item())/(i+1)
+                                        valid_log['valid-loss'] = valid_loss
+                                        pbar_string = "Valid %d: loss %2.6f"%(epoch+1, valid_loss)
+                                        for name, metric in self.metrics.items():
+                                            res = metric(pred, output)
+                                            valid_metric[name] = (valid_metric[name]*i + res.item())/(i+1)
+                                            valid_log['valid-'+name] = valid_metric[name]
+                                            pbar_string += " %2.4f"%res
+                                        pbar_valid.set_description(pbar_string)
+                                    self.wandb.log(valid_log)
+                                if self.es_argument is None:
+                                    self.early_stopping(valid_loss, model)
+                                else: 
+                                    self.early_stopping(self.es_argument(valid_log), model)
                         else:
                             if self.es_argument is None:
                                 self.early_stopping(epoch_loss, model)
