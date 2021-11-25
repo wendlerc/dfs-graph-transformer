@@ -9,7 +9,10 @@ Created on Wed Nov 24 15:27:33 2021
 import wandb 
 import subprocess
 
-wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
+try:
+    wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
+except:
+    print('already logged in')
 
 api = wandb.Api()
 for run in api.runs("dfstransformer/pubchem_plus_properties"):
