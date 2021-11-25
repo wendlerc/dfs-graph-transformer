@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 import math
 from .utils import PositionalEncoding
+from .rnn import DFSCodeEncoderLSTM
 from einops import rearrange
 from torchdistill.core.forward_hook import ForwardHookManager
 
