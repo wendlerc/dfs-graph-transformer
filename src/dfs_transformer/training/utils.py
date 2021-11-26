@@ -88,17 +88,18 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
         node_batch = [] 
         edge_batch = []
         code_batch = []
+        dfs_codes = defaultdict(list)
         if "properties" in dlist[0].keys:
             prop_batch = defaultdict(list)
         if use_loops:
             loop = torch.tensor(bond_features(None)).unsqueeze(0)
         for d in dlist:
             
-            edge_features = d.edge_features.clone()
+            edge_features = d.edge_features
             
             if mode == "min2min":
-                code = d.min_dfs_code.clone()
-                index = d.min_dfs_index.clone()
+                code = d.min_dfs_code
+                index = d.min_dfs_index
             elif mode == "rnd2rnd":
                 rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
                                                                          d.z.numpy().tolist(), 
@@ -118,7 +119,7 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
                 loops = torch.cat((arange, arange, nattr, eattr, nattr, vids, eids, vids), dim=1)
                 code = torch.cat((code, loops), dim=0)
                 
-            node_batch += [d.node_features.clone()]
+            node_batch += [d.node_features]
             edge_batch += [edge_features]
             code_batch += [code]
             if "properties" in dlist[0].keys:
@@ -126,11 +127,37 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
                     prop_batch[name] += [prop]
                     
         inputs, outputs = BERTize(code_batch, fraction_missing=fraction_missing)
-        targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1)
+        
+        for inp, nfeats, efeats in zip(inputs, node_batch, edge_batch):
+            mask = (inp[:, 0] != -1) 
+            dfs_codes['dfs_from'] += [inp[:, 0]]
+            dfs_codes['dfs_to'] += [inp[:, 1]]
+            
+            atm_from_feats = torch.ones((inp.shape[0], nfeats.shape[1]))
+            atm_from_feats[mask] *= nfeats[inp[mask][:, -3]]
+            atm_from_feats[~mask] *= -1
+            
+            atm_to_feats = torch.ones((inp.shape[0], nfeats.shape[1]))
+            atm_to_feats[mask] *= nfeats[inp[mask][:, -1]]
+            atm_to_feats[~mask] *= -1
+            
+            bnd_feats = torch.ones((inp.shape[0], efeats.shape[1]))
+            bnd_feats[mask] *= efeats[inp[mask][:, -2]]
+            bnd_feats[~mask] *= -1
+            
+            
+            dfs_codes['atm_from'] += [atm_from_feats]
+            dfs_codes['atm_to'] += [atm_to_feats]
+            dfs_codes['bnd'] += [bnd_feats]
+            
+        dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
+                     for key, values in dfs_codes.items()}
+        
+        targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1).clone()
         if "properties" in dlist[0].keys:
-            prop_batch = {name: torch.tensor(deepcopy(plist)) for name, plist in prop_batch.items()}
-            return inputs, node_batch, edge_batch, targets, prop_batch
-        return inputs, node_batch, edge_batch, targets 
+            prop_batch = {name: torch.tensor(plist).clone() for name, plist in prop_batch.items()}
+            return dfs_codes, targets, prop_batch
+        return dfs_codes, targets 
     
     
 def collate_rnd2min(dlist, use_loops=False):

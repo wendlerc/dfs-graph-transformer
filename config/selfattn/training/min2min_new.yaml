@@ -1,10 +1,11 @@
 mode: min2min
 fraction_missing: 0.15
 lr: null
+lr_factor: 0.5
 lr_warmup: 4000
 n_epochs: 1
 minimal_lr: 0.00000006
-batch_size: 50
+batch_size: 200
 accumulate_grads: 3
 gpu_id: 0
 es_patience: 100
@@ -12,7 +13,7 @@ es_improvement: 0.0
 pretrained_dir: null
 es_path: null
 load_last: True
-num_workers: 0
+num_workers: 8
 prefetch_factor: 2
 pin_memory: True
 

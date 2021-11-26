@@ -25,8 +25,8 @@ class TransformerPlusHeads(nn.Module):
         self.head_specs = head_specs
         self.head_dict = nn.ModuleDict({name.replace(".", "_"): nn.Linear(self.ninp* self.encoder.n_class_tokens, n_output) for name, n_output in head_specs.items()})
             
-    def forward(self, C, N, E):
-        dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, features = self.encoder(C, N, E)
+    def forward(self, dfs_code):
+        dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, features = self.encoder(dfs_code)
         property_predictions = {name.replace("_", "."): head(features) for name, head in self.head_dict.items()}
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, property_predictions
     
@@ -58,49 +58,35 @@ class DFSCodeEncoder(nn.Module):
             nn.init.normal_(self.missing_token, mean=.0, std=.5)
             
         self.rescale_factor = math.sqrt(self.ninp) if rescale_flag else 1.
-        
-    def prepare_tokens_BERT(self, C, N, E):
-        src = []
-        for code, n_feats, e_feats in zip(C, N, E):
-            mask = code[:, 0] != self.missing_value
-            atom_emb, bond_emb = self.emb_atom(n_feats), self.emb_bond(e_feats)
-            # embed all the non-missing values
-            code_input = torch.cat((self.dfs_emb[code[mask][:, 0]], 
-                                    self.dfs_emb[code[mask][:, 1]], 
-                                    atom_emb[code[mask][:, -3]], 
-                                    bond_emb[code[mask][:, -2]], 
-                                    atom_emb[code[mask][:,-1]]), dim=1)
-            # create missing tokens
-            code_missing = self.missing_token.expand(torch.sum(~mask),-1)
-            code_emb = torch.ones((code.shape[0], self.ninp), device=code_input.device)
+
+    def forward(self, dfs_codes, class_token=None):
+        if self.missing_value is not None:
+            src_key_padding_mask = (dfs_codes['dfs_from'] == -1000).T
+            n_seq = dfs_codes['dfs_from'].shape[0]
+            n_batch = dfs_codes['dfs_from'].shape[1]
+            mask = dfs_codes['dfs_from'] >= 0
+            missing = dfs_codes['dfs_from'] == -1
+            atm_from = dfs_codes['atm_from'][mask]
+            atm1 = self.emb_atom(atm_from)
+            atm_to = dfs_codes['atm_to'][mask]
+            atm2 = self.emb_atom(atm_to)
+            bnd_inp = dfs_codes['bnd'][mask]
+            bnd = self.emb_bond(bnd_inp)
+            code_input = torch.cat((self.dfs_emb[dfs_codes['dfs_from'][mask]],
+                                    self.dfs_emb[dfs_codes['dfs_to'][mask]],
+                                    atm1, atm2, bnd), dim=1)
+            
+            code_emb = torch.ones((n_seq, 
+                                   n_batch, 
+                                   self.ninp), device=dfs_codes['dfs_from'].device)
             code_emb[mask] *= code_input
-            code_emb[~mask] *= code_missing
-            # put everything into the right place
-            code_emb = self.mixer(code_emb) # allow the transformer to reshuffle features before the pe is added
-            src.append(code_emb)
-        batch = nn.utils.rnn.pad_sequence(src, padding_value=-1000)
-        src_key_padding_mask = (batch[:, :, 0] == -1000).T 
-        batch = self.emb_seq(batch * self.rescale_factor)
-        return batch, src_key_padding_mask
-
-    def prepare_tokens(self, C, N, E):
-        src = []
-        for code, n_feats, e_feats in zip(C, N, E):
-            atom_emb, bond_emb = self.emb_atom(n_feats), self.emb_bond(e_feats)
-            code_emb = torch.cat((self.dfs_emb[code[:, 0]], self.dfs_emb[code[:, 1]], 
-                                  atom_emb[code[:, -3]], bond_emb[code[:, -2]], atom_emb[code[:,-1]]), dim=1)
-            code_emb = self.mixer(code_emb) # allow the transformer to reshuffle features before the pe is added
-            src.append(code_emb)
-        batch = nn.utils.rnn.pad_sequence(src, padding_value=-1000)
-        src_key_padding_mask = (batch[:, :, 0] == -1000).T 
-        batch = self.emb_seq(batch * self.rescale_factor)
-        return batch, src_key_padding_mask
-
-    def forward(self, C, N, E, class_token=None):
-        if self.missing_value is None:
-            batch, src_key_padding_mask = self.prepare_tokens(C, N, E)
+            code_emb[missing] *= self.missing_token
+            code_emb[~src_key_padding_mask.T] = self.mixer(code_emb[~src_key_padding_mask.T])
+            batch = self.emb_seq(code_emb * self.rescale_factor)
         else:
-            batch, src_key_padding_mask = self.prepare_tokens_BERT(C, N, E)
+            raise NotImplemented('not implemented yet')
+            
+            
         # batch is of shape (sequence length, batch, d_model)
         if class_token is None:
             self_attn = self.enc(batch, src_key_padding_mask=src_key_padding_mask)
@@ -334,8 +320,8 @@ class DFSCodeSeq2SeqFC(nn.Module):
         self.cls_token = nn.Parameter(torch.empty(n_class_tokens, 1, self.ninp), requires_grad=True)
         nn.init.normal_(self.cls_token, mean=.0, std=.5)
         
-    def forward(self, C, N, E):
-        self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
+    def forward(self, dfs_codes):
+        self_attn, _ = self.encoder(dfs_codes, class_token=self.cls_token) # seq x batch x feat
         
         batch_feats = self_attn[self.n_class_tokens:] 
         batch_global = self_attn[:self.n_class_tokens]
@@ -354,7 +340,8 @@ class DFSCodeSeq2SeqFC(nn.Module):
             return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, features
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
-    def encode(self, C, N, E, method="cls"):
+    def encode(self, dfs_codes, method="cls"):
+        raise NotImplemented('not implemented yet')
         if method == "cls3":
             forward_hook_manager = ForwardHookManager(C[0].device)
             for lid in range(self.nlayers): 

@@ -17,11 +17,11 @@ import functools
 
 class TrainerNew():
     def __init__(self, model, loader, loss, validloader=None, metrics={}, metric_pbar_keys=None,
-                 input_idxs = [0, 1, 2],
-                 output_idxs = [3, 4],
+                 input_idxs = [0],
+                 output_idxs = [1, 2],
                  scorer=None, optimizer=torch.optim.Adam,
                  n_epochs=1000, accumulate_grads=1, lr=None, lr_warmup=4000,
-                 minimal_lr=6e-8, 
+                 minimal_lr=6e-8, lr_factor=1.,
                  es_argument = None,
                  gpu_id=0, es_improvement=0.0, 
                  es_patience=100, es_path=None, es_period=1000, wandb_run = None, 
@@ -49,6 +49,7 @@ class TrainerNew():
             self.lr = 1/(model.ninp**0.5)
         else:
             self.lr = lr
+        self.lr *= lr_factor
         self.lr_warmup = lr_warmup
         self.minimal_lr = minimal_lr
         self.gpu_id = gpu_id

@@ -58,9 +58,9 @@ if __name__ == "__main__":
     if args.no_features:
         config.model.n_node_features = 118
         config.model.n_edge_features = 5
-        config.model["no_features"] = True
+        config.data["no_features"] = True
     else:
-        config.model["no_features"] = False
+        config.data["no_features"] = False
     
     with open(config.data.path+"/properties_aggr.pkl", "rb") as f:
         prop_aggr = pickle.load(f)
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     
     validloader = None
     if d.valid_path is not None:
-        validset = PubChem(d.valid_path, max_nodes=m.max_nodes, max_edges=m.max_edges, noFeatures=m.no_features,
+        validset = PubChem(d.valid_path, max_nodes=d.max_nodes, max_edges=d.max_edges, noFeatures=d.no_features,
                            molecular_properties=d.molecular_properties)
         validloader = DataLoader(validset, batch_size=t.batch_size, shuffle=True, 
                                  pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
@@ -197,8 +197,8 @@ if __name__ == "__main__":
         for epoch in range(t.n_epochs):
             print('starting epoch %d'%(epoch+1))
             for split in range(n_splits):
-                dataset = PubChem(d.path, n_used = d.n_used, max_nodes=m.max_nodes, 
-                                  max_edges=m.max_edges, exclude=exclude, noFeatures=m.no_features,
+                dataset = PubChem(d.path, n_used = d.n_used, max_nodes=d.max_nodes, 
+                                  max_edges=d.max_edges, exclude=exclude, noFeatures=d.no_features,
                                   molecular_properties=d.molecular_properties)
                 loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
                                     pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
