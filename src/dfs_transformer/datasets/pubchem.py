@@ -1,7 +1,8 @@
 import pickle
 import numpy as np
 from torch.utils.data import Dataset
-from torch_geometric.data import Data
+#from torch_geometric.data import Data
+from ml_collections import ConfigDict as Data
 import glob
 import torch
 import tqdm
@@ -101,24 +102,25 @@ class PubChem(Dataset):
                     edge_features = torch.tensor(d['bond_features'], dtype=torch.float32)
                 
                 if self.molecular_properties is not None:
-                    data_ = Data(z=z,
-                                 edge_attr=torch.tensor(d['edge_attr']),
-                                 edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
-                                 min_dfs_code=torch.tensor(code['min_dfs_code']),
-                                 min_dfs_index=torch.tensor(code['dfs_index'], dtype=torch.long),
-                                 smiles=smiles,
-                                 node_features=node_features,
-                                 edge_features=edge_features,
-                                 properties={name:props_all[smiles][name] for name in self.molecular_properties})
+                    data_ = Data({"z":z,
+                                 "edge_attr":torch.tensor(d['edge_attr']),
+                                 "edge_index":torch.tensor(d['edge_index'], dtype=torch.long),
+                                 "min_dfs_code":torch.tensor(code['min_dfs_code']),
+                                 "min_dfs_index":torch.tensor(code['dfs_index'], dtype=torch.long),
+                                 "smiles":smiles,
+                                 "node_features":node_features,
+                                 "edge_features":edge_features,
+                                 "properties":None})
+                    data_.properties = {name.replace('.','_'):props_all[smiles][name] for name in self.molecular_properties}
                 else:
-                    data_ = Data(z=z,
-                                 edge_attr=torch.tensor(d['edge_attr']),
-                                 edge_index=torch.tensor(d['edge_index'], dtype=torch.long),
-                                 min_dfs_code=torch.tensor(code['min_dfs_code']),
-                                 min_dfs_index=torch.tensor(code['dfs_index'], dtype=torch.long),
-                                 smiles=smiles,
-                                 node_features=node_features,
-                                 edge_features=edge_features)
+                    data_ = Data({"z":z,
+                                 "edge_attr":torch.tensor(d['edge_attr']),
+                                 "edge_index":torch.tensor(d['edge_index'], dtype=torch.long),
+                                 "min_dfs_code":torch.tensor(code['min_dfs_code']),
+                                 "min_dfs_index":torch.tensor(code['dfs_index'], dtype=torch.long),
+                                 "smiles":smiles,
+                                 "node_features":node_features,
+                                 "edge_features":edge_features})
                     
                 self.data += [data_]   
                 self.smiles += [smiles]

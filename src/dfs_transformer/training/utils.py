@@ -89,7 +89,7 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
         edge_batch = []
         code_batch = []
         dfs_codes = defaultdict(list)
-        if "properties" in dlist[0].keys:
+        if "properties" in dlist[0].keys():
             prop_batch = defaultdict(list)
         if use_loops:
             loop = torch.tensor(bond_features(None)).unsqueeze(0)
@@ -122,9 +122,9 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
             node_batch += [d.node_features]
             edge_batch += [edge_features]
             code_batch += [code]
-            if "properties" in dlist[0].keys:
+            if "properties" in dlist[0].keys():
                 for name, prop in d.properties.items():
-                    prop_batch[name] += [prop]
+                    prop_batch[name.replace('_', '.')] += [prop]
                     
         inputs, outputs = BERTize(code_batch, fraction_missing=fraction_missing)
         
@@ -154,7 +154,7 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
                      for key, values in dfs_codes.items()}
         
         targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1).clone()
-        if "properties" in dlist[0].keys:
+        if "properties" in dlist[0].keys():
             prop_batch = {name: torch.tensor(plist).clone() for name, plist in prop_batch.items()}
             return dfs_codes, targets, prop_batch
         return dfs_codes, targets 
