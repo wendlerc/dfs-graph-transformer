@@ -67,21 +67,43 @@ def seq_acc(pred, target, idx=0):
         return acc
 
 
-def BERTize(codes, fraction_missing=0.15):
+def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
+    """
+    Training the language model in BERT is done by predicting 15% of the tokens in the input, that were randomly picked. 
+    These tokens are pre-processed as follows — 80% are replaced with a “[MASK]” token, 10% with a random word, and 10% 
+    use the original word. 
+    
+    to get a random word we use the following strategy: we copy an random entry to that position 
+    TODO: in the future one could also in addition implement a flip of the edge direction with a 50% chance
+    
+    returns preprocessed input sequences, target sequences and a mask indicating which inputs are part of the 15% masked, orig, rnd
+    """
+    fraction_orig = 1. - fraction_mask - fraction_rand
+    fo = fraction_orig
+    fm = fraction_mask
+    fr = fraction_rand
     inputs = []
     targets = []
+    masks = []
     for code in codes:
         n = len(code)
         perm = np.random.permutation(n)
-        target_idx = perm[:int(fraction_missing*n)]
-        input_idx = perm[int(fraction_missing*n):]
+        perm2 = np.random.permutation(n)
+        mask = torch.zeros(n, dtype=bool)
+        mask[perm[int(fraction_missing*n):]] = True
+        delete_target_idx = perm[int(fraction_missing*n):]
+        delete_input_idx = perm[:int(fraction_missing*fm*n)]
+        input_rnd_idx = perm[int(fraction_missing*fm*n):int(fraction_missing*(fm+fr)*n)]
+        target_rnd_idx = perm2[int(fraction_missing*fm*n):int(fraction_missing*(fm+fr)*n)] 
         inp = code.clone()
         target = code.clone()
-        target[input_idx] = -1
-        inp[target_idx] = -1
+        inp[input_rnd_idx] = target[target_rnd_idx]
+        target[delete_target_idx] = -1
+        inp[delete_input_idx] = -1
         inputs += [inp]
         targets += [target]
-    return inputs, targets
+        masks += [mask]
+    return inputs, targets, masks
 
 
 def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
@@ -126,10 +148,10 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
                 for name, prop in d.properties.items():
                     prop_batch[name.replace('_', '.')] += [prop]
                     
-        inputs, outputs = BERTize(code_batch, fraction_missing=fraction_missing)
+        inputs, outputs, masks = BERTize(code_batch, fraction_missing=fraction_missing)
         
-        for inp, nfeats, efeats in zip(inputs, node_batch, edge_batch):
-            mask = (inp[:, 0] != -1) 
+        for bertmask, inp, nfeats, efeats in zip(masks, inputs, node_batch, edge_batch):
+            mask = ~bertmask # the mask returned by BERT indicates which inputs will be masked away
             dfs_codes['dfs_from'] += [inp[:, 0]]
             dfs_codes['dfs_to'] += [inp[:, 1]]
             
