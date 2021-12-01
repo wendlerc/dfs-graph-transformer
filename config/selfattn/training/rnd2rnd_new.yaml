@@ -8,7 +8,7 @@ lr_total_steps: 117187 # (1e6 / 256)*30
 weight_decay: 0.01 # bert paper
 n_epochs: 1
 minimal_lr: 0.00000006
-batch_size: 200 #bert paper
+batch_size: 256 #bert paper
 accumulate_grads: 1 #bert paper
 gpu_id: 0
 es_patience: 100
