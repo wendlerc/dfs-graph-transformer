@@ -90,7 +90,7 @@ def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
         perm = np.random.permutation(n)
         perm2 = np.random.permutation(n)
         mask = torch.zeros(n, dtype=bool)
-        mask[perm[int(fraction_missing*n):]] = True
+        mask[perm[:int(fraction_missing*n)]] = True
         delete_target_idx = perm[int(fraction_missing*n):]
         delete_input_idx = perm[:int(fraction_missing*fm*n)]
         input_rnd_idx = perm[int(fraction_missing*fm*n):int(fraction_missing*(fm+fr)*n)]
@@ -100,6 +100,8 @@ def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
         inp[input_rnd_idx] = target[target_rnd_idx]
         target[delete_target_idx] = -1
         inp[delete_input_idx] = -1
+        #print(inp)
+        #print(target)
         inputs += [inp]
         targets += [target]
         masks += [mask]
@@ -151,6 +153,9 @@ def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
         inputs, outputs, masks = BERTize(code_batch, fraction_missing=fraction_missing)
         
         for bertmask, inp, nfeats, efeats in zip(masks, inputs, node_batch, edge_batch):
+            #print(inp[bertmask])
+            #print('----')
+            #print(output[bertmask])
             mask = ~bertmask # the mask returned by BERT indicates which inputs will be masked away
             dfs_codes['dfs_from'] += [inp[:, 0]]
             dfs_codes['dfs_to'] += [inp[:, 1]]
