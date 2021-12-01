@@ -1,19 +1,22 @@
 mode: min2min
-fraction_missing: 0.15
-lr: null
-lr_factor: 0.5
-lr_warmup: 4000
+fraction_missing: 0.15 #bert paper
+lr: 0.0001 #bert paper
+lr_factor: 1. #lr factor is a param for minibatching
+lr_warmup: 10000 #bert paper
+lr_decay_type: "linear" # this correspodns to linear decay
+lr_total_steps: 117187 #  in bert paper has 1e6, adjusted to this dataset it would be 117187 # (1e6 / 256)*30 
+weight_decay: 0.01 # bert paper
 n_epochs: 1
 minimal_lr: 0.00000006
-batch_size: 200
-accumulate_grads: 3
+batch_size: 200 #bert paper
+accumulate_grads: 1 #bert paper
 gpu_id: 0
 es_patience: 100
 es_improvement: 0.0
 pretrained_dir: null
 es_path: null
 load_last: True
-num_workers: 8
+num_workers: 4
 prefetch_factor: 2
 pin_memory: True
 

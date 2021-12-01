@@ -24,7 +24,7 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (2*2048, rlimit[1]))
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
-    parser.add_argument('--wandb_project', type=str, default="pubchem_plus_properties")
+    parser.add_argument('--wandb_project', type=str, default="pubchem_newdataloader")
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--yaml_model', type=str, default="./config/selfattn/model/bert.yaml") 
     parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem1M.yaml")

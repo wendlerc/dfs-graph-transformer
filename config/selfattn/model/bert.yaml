@@ -6,6 +6,7 @@ nlayers: 6
 max_nodes: 250
 max_edges: 500
 dim_feedforward: 2048
+activation: "gelu"
 missing_value: -1
 n_node_features: 133
 n_edge_features: 14

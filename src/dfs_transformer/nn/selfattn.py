@@ -34,6 +34,7 @@ class TransformerPlusHeads(nn.Module):
 class DFSCodeEncoder(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 
                  emb_dim=120, nhead=12, nlayers=6, dim_feedforward=2048, 
+                 activation = 'gelu',
                  max_nodes=250, max_edges=500, dropout=0.1, missing_value=None,
                  rescale_flag=True, **kwargs):
         super().__init__()
@@ -51,7 +52,8 @@ class DFSCodeEncoder(nn.Module):
         self.enc = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=self.ninp, 
                                                                     nhead=nhead,
                                                                     dim_feedforward=dim_feedforward,
-                                                                    dropout=dropout), nlayers)
+                                                                    dropout=dropout, 
+                                                                    activation=activation), nlayers)
         self.missing_value = missing_value
         if missing_value is not None:
             self.missing_token = nn.Parameter(torch.empty(1, self.ninp), requires_grad=True)

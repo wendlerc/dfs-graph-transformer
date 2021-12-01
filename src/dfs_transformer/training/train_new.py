@@ -19,13 +19,15 @@ class TrainerNew():
     def __init__(self, model, loader, loss, validloader=None, metrics={}, metric_pbar_keys=None,
                  input_idxs = [0],
                  output_idxs = [1, 2],
-                 scorer=None, optimizer=torch.optim.Adam,
+                 scorer=None, optimizer=torch.optim.AdamW,
                  n_epochs=1000, accumulate_grads=1, lr=None, lr_warmup=4000,
-                 minimal_lr=6e-8, lr_factor=1.,
+                 minimal_lr=6e-8, lr_factor=1., lr_decay_type='linear',
+                 lr_total_steps = None,
                  es_argument = None,
                  gpu_id=0, es_improvement=0.0, 
                  es_patience=100, es_path=None, es_period=1000, wandb_run = None, 
-                 adam_betas=(0.9,0.98), adam_eps=1e-9, param_groups=None, **kwargs):
+                 adam_betas=(0.9,0.999), adam_eps=1e-9, weight_decay = 0.01,
+                 param_groups=None, **kwargs):
         """
         data = next(iter(loader)),
         loss and metrics are mappings from (preds, outputs) -> real number 
@@ -51,6 +53,14 @@ class TrainerNew():
             self.lr = lr
         self.lr *= lr_factor
         self.lr_warmup = lr_warmup
+        #TODO: this does not work well together with the splits... -> pull the split part also into the trainer?
+        if lr_total_steps is not None:
+            self.lr_total_steps = lr_total_steps
+        else:
+            n_examples = len(loader.dataset)
+            batch_size = loader.batch_size
+            steps_per_epoch = n_examples//batch_size
+            self.lr_total_steps = n_epochs*steps_per_epoch
         self.minimal_lr = minimal_lr
         self.gpu_id = gpu_id
         if self.gpu_id is not None:
@@ -70,9 +80,20 @@ class TrainerNew():
         if param_groups is not None:
             self.optim = self.optimizer(param_groups)
         else:
-            self.optim = self.optimizer(model.parameters(), betas=adam_betas, eps=adam_eps, lr=self.lr)
+            self.optim = self.optimizer(model.parameters(), betas=adam_betas, 
+                                        eps=adam_eps, lr=self.lr, 
+                                        weight_decay=weight_decay)
+        if lr_decay_type == 'linear':
+            def lr_lambda(current_step: int):
+                if current_step < self.lr_warmup:
+                    return float(current_step) / float(max(1, self.lr_warmup))
+                return max(
+                    0.0, float(self.lr_total_steps - current_step) / float(max(1, self.lr_total_steps - self.lr_warmup))
+                )
+        else:
+            lr_lambda = lambda t: min(1/((t+1)**0.5), (t+1)*(1/(self.lr_warmup**(1 + 0.5))))
         self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(self.optim, 
-                                                              lr_lambda = lambda t: min(1/((t+1)**0.5), (t+1)*(1/(self.lr_warmup**1.5))), 
+                                                              lr_lambda = lr_lambda, 
                                                               verbose = False)
         self.model = self.model.to(self.device)
         os.makedirs(self.es_path, exist_ok=True)
