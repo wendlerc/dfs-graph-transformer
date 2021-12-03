@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_dir', type=str, default="./wandb")
     parser.add_argument('--yaml', type=str, default="./config/selfattn/moleculenet.yaml") 
     parser.add_argument('--yaml_model', type=str, default="./config/selfattn/model/bert.yaml")
-    parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem10K.yaml")
+    parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem1M.yaml")
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--model', type=str, default=None)
     parser.add_argument('--n_hidden', type=int, default=0)
@@ -179,28 +179,25 @@ if __name__ == "__main__":
         
         if t.use_min: 
             for i, data in enumerate(tqdm.tqdm(loader)):
-                smls, minc, nfeat, efeat, y = data
-                code = to_cuda(minc)
-                feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
+                smls, codes, y = data
+                codes = to_cuda(codes)
+                feats = model.encode(codes, method=t.fingerprint)
                 smiles += deepcopy(smls)
                 features += [feats.detach().cpu()]
         else:
             for i, data in enumerate(tqdm.tqdm(loader)):
-                smls, rndc, nfeat, efeat, y = data
-                #for c, e, n in zip(rndc, efeat, nfeat):
-                #    print(c.shape, e.shape, n.shape)
-
-                code = to_cuda(rndc)
-                feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
+                smls, codes, y = data
+                codes = to_cuda(codes)
+                feats = model.encode(codes, method=t.fingerprint)
                 smiles += deepcopy(smls)
                 features += [feats.detach().cpu()]
                 
             
             for rep in range(9):
                 for i, data in enumerate(tqdm.tqdm(loader)):
-                    smls, rndc, nfeat, efeat, y = data
-                    code = to_cuda(rndc)
-                    feats = model.encode(code, to_cuda(nfeat), to_cuda(efeat), method=t.fingerprint)
+                    smls, codes, y = data
+                    codes = to_cuda(codes)
+                    feats = model.encode(codes, method=t.fingerprint)
                     features[i] += feats.detach().cpu()
             features = [feature/10 for feature in features]
                 

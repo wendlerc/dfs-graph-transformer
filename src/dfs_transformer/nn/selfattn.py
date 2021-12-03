@@ -343,13 +343,12 @@ class DFSCodeSeq2SeqFC(nn.Module):
         return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
     
     def encode(self, dfs_codes, method="cls"):
-        raise NotImplemented('not implemented yet')
         if method == "cls3":
             forward_hook_manager = ForwardHookManager(C[0].device)
             for lid in range(self.nlayers): 
                 forward_hook_manager.add_hook(self.encoder, 'enc.layers.%d'%lid, requires_input=False, requires_output=True)
         ncls = self.n_class_tokens
-        self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
+        self_attn, _ = self.encoder(dfs_codes, class_token=self.cls_token) # seq x batch x feat
         if method == "cls":
             #features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
             features = self_attn[:ncls]

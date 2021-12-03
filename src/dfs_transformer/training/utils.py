@@ -233,6 +233,7 @@ def collate_rnd2min(dlist, use_loops=False):
     
     
 def collate_downstream(dlist, alpha=0, use_loops=False, use_min=False):
+    dfs_codes = defaultdict(list)
     smiles = []
     node_batch = [] 
     edge_batch = []
@@ -266,7 +267,20 @@ def collate_downstream(dlist, alpha=0, use_loops=False, use_min=False):
         node_batch += [d.node_features.clone()]
         edge_batch += [edge_features]
         y_batch += [d.y.clone()]
-        smiles += [deepcopy(d.smiles)]
+        smiles += [deepcopy(d.smiles)]        
     y = torch.cat(y_batch).unsqueeze(1)
     y = (1-alpha)*y + alpha/2
-    return smiles, rnd_code_batch, node_batch, edge_batch, y
+    
+    for inp, nfeats, efeats in zip(rnd_code_batch, node_batch, edge_batch):
+        dfs_codes['dfs_from'] += [inp[:, 0]]
+        dfs_codes['dfs_to'] += [inp[:, 1]]
+        atm_from_feats = nfeats[inp[:, -3]]
+        atm_to_feats = nfeats[inp[:, -1]]
+        bnd_feats = efeats[inp[:, -2]]
+        dfs_codes['atm_from'] += [atm_from_feats]
+        dfs_codes['atm_to'] += [atm_to_feats]
+        dfs_codes['bnd'] += [bnd_feats]
+
+    dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
+                 for key, values in dfs_codes.items()}
+    return smiles, dfs_codes, y

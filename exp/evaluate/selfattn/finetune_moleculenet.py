@@ -14,8 +14,8 @@ import pandas as pd
 import sys
 from sklearn.metrics import roc_auc_score, average_precision_score
 sys.path = ['./src'] + sys.path
-from dfs_transformer import Deepchem2TorchGeometric, collate_downstream, DFSCodeSeq2SeqFC
-from dfs_transformer import to_cuda, Trainer
+from dfs_transformer import Deepchem2TorchGeometric, collate_downstream, DFSCodeSeq2SeqFC, collate_downstream, TransformerPlusHeads
+from dfs_transformer import to_cuda, TrainerNew
 import argparse
 import yaml
 from ml_collections import ConfigDict
@@ -23,44 +23,59 @@ import functools
 from copy import deepcopy
 import dfs_code
 from chemprop.features.featurization import bond_features
+import pickle
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 def load_selfattn(t, device):
-    model_dir = None
-    model_yaml = None
-    if t.pretrained_model is not None:
-        # download pretrained model
-        run = wandb.init(mode=args.wandb_mode, 
-                         project=t.pretrained_project, 
-                         entity=t.pretrained_entity, 
-                         job_type="inference",
-                         dir=t.wandb_dir)
-        model_at = run.use_artifact(t.pretrained_model + ":latest")
-        model_dir = model_at.download(root=t.wandb_dir+'/artifacts/%s/'%t.pretrained_model)
-        run.finish()
-    elif t.pretrained_dir is not None:
-        model_dir = t.pretrained_dir
-        
+    # download pretrained model
+    run = wandb.init(mode=args.wandb_mode, 
+                     project=t.pretrained_project, 
+                     entity=t.pretrained_entity, 
+                     job_type="inference",
+                     dir=t.wandb_dir)
+    model_at = run.use_artifact(t.pretrained_model + ":latest")
+    model_dir = model_at.download(root=t.wandb_dir+'/artifacts/%s/'%t.pretrained_model)
+    run.finish()
+
     model_yaml = model_dir+"/config.yaml"
     if not os.path.isfile(model_yaml) or t.use_local_yaml:
         model_yaml = t.pretrained_yaml
     
     with open(model_yaml) as file:
-        config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
-    m = config.model
-        
-    model = eval(t.pretrained_class)(**m)
+        cfg = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
+    
+    m = cfg.model
+    
+    encoder = DFSCodeSeq2SeqFC(**m)
+    head_specs = {}
+    
+    with open(t.data.path+"/properties_aggr.pkl", "rb") as f:
+        prop_aggr = pickle.load(f)
+    if config.data.molecular_properties is None:
+        cfg.molecular_properties = list(prop_aggr.keys())
+    
+    for name in cfg.data.molecular_properties:
+        aggr = prop_aggr[name]
+        if aggr['is_int']:
+            head_specs[name] = aggr['max'] - aggr['min'] + 2 # +1 because we have class 0, ..., k, +1 for outliers 
+        else:
+            head_specs[name] = 1
+    
+    model = TransformerPlusHeads(encoder, head_specs)
+    
     if model_dir is not None:
         model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
+    model = model.encoder
         
     return model, m
 
 def loss(pred, y, ce):
-    return ce(pred, y)
+    return ce(pred, y[0])
 
 
 def acc(pred, y):
+    y = y[0]
     y_pred = (pred > 0.5).squeeze()
     y = (y > 0.5)
     return (y_pred == y.squeeze()).sum()/len(y)
@@ -69,9 +84,10 @@ def score(model, loader, device, onlyroc=False):
     with torch.no_grad():
         full_preds, target = [], []
         for data in tqdm.tqdm(loader):
-            data = [to_cuda(d, device) for d in data]
-            pred = model(*data[:-1]).squeeze()
-            y = data[-1].detach().cpu().squeeze()
+            smiles, codes, y = data
+            codes = to_cuda(codes, device)
+            pred = model(codes).squeeze()
+            y = y.squeeze()
             pred_np = pred.detach().cpu().numpy().tolist()
             y_np = y.numpy().tolist()
             full_preds += pred_np
@@ -85,48 +101,12 @@ def score(model, loader, device, onlyroc=False):
         return roc
     return roc, prc
 
-def collate_fn(dlist, alpha=0, use_loops=True, use_min=False):
-    node_batch = [] 
-    edge_batch = []
-    y_batch = []
-    code_batch = []
-    if use_loops:
-        loop = torch.tensor(bond_features(None)).unsqueeze(0)
-    for d in dlist:
-        edge_features = d.edge_features.clone()
-        if use_min:
-            code = d.min_dfs_code.clone()
-            index = d.min_dfs_index.clone()
-        else:
-            code, index = dfs_code.rnd_dfs_code_from_torch_geometric(d, d.z.numpy().tolist(), 
-                                                                     np.argmax(d.edge_attr.numpy(), axis=1).tolist())
-            
-            code = torch.tensor(code, dtype=torch.long)
-            index = torch.tensor(index, dtype=torch.long)
-        
-        if use_loops:
-            edge_features = torch.cat((edge_features, loop), dim=0)
-            vids = torch.argsort(index).unsqueeze(1)
-            eids = torch.ones_like(vids)*(edge_features.shape[0] - 1)
-            nattr = d.z[vids]
-            eattr = torch.ones_like(vids)*4 # 4 stands for loop
-            arange = index[vids]
-            loops = torch.cat((arange, arange, nattr, eattr, nattr, vids, eids, vids), dim=1)
-            code = torch.cat((code, loops), dim=0)
-        
-        code_batch += [code]
-        node_batch += [d.node_features.clone()]
-        edge_batch += [edge_features]
-        y_batch += [d.y.clone()]
-    y = torch.cat(y_batch).unsqueeze(1)
-    y = (1-alpha)*y + alpha/2
-    return code_batch, node_batch, edge_batch, y
-
 
 class TransformerPlusHead(nn.Module):
     def __init__(self, encoder, n_encoding, n_classes, n_hidden=0, fingerprint='cls'):
         super(TransformerPlusHead, self).__init__()
         self.encoder = encoder
+        self.ninp = self.encoder.ninp
         if n_hidden > 0:
             layers = []
             input_dim = n_encoding
@@ -139,18 +119,19 @@ class TransformerPlusHead(nn.Module):
             self.head = nn.Linear(n_encoding, n_classes)
         self.fingerprint = fingerprint
     
-    def forward(self, C, N, E):
-        features = self.encoder.encode(C, N, E, method=self.fingerprint)
+    def forward(self, dfs_codes):
+        features = self.encoder.encode(dfs_codes, method=self.fingerprint)
         output = self.head(features)
         return output
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
-    parser.add_argument('--wandb_project', type=str, default="moleculenet10-finetune")
+    parser.add_argument('--wandb_project', type=str, default="moleculenet10-finetune-newloader")
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--wandb_dir', type=str, default="./wandb")
     parser.add_argument('--yaml', type=str, default="./config/selfattn/finetune_moleculenet.yaml") 
+    parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem1M.yaml")
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--model', type=str, default=None)
     parser.add_argument('--n_hidden', type=int, default=0)
@@ -159,6 +140,9 @@ if __name__ == "__main__":
         
     with open(args.yaml) as file:
         config = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
+        
+    with open(args.yaml_data) as file:
+        d = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
     for key,value in args.overwrite.items():
         if type(value) is dict:
@@ -166,6 +150,8 @@ if __name__ == "__main__":
                 config[key][key1] = value1
         else:
             config[key] = value
+    
+    config.data = d
     
     if args.model is not None:
         config.pretrained_model = args.model
@@ -191,6 +177,8 @@ if __name__ == "__main__":
     
     if "use_loops" not in m:
         m.use_loops = False
+    
+    collate_fn = collate_downstream
     
     coll_train = functools.partial(collate_fn, use_loops=m.use_loops, use_min=t.use_min, alpha=t.label_smoothing_alpha)
     coll_val = functools.partial(collate_fn, use_loops=m.use_loops, use_min=t.use_min, alpha=0)
@@ -266,13 +254,13 @@ if __name__ == "__main__":
             l = functools.partial(loss, ce=bce)
             scorer = functools.partial(score, loader=validloader, device=device, onlyroc=True)
             
-            t.es_period = (len(trainset)//t.batch_size)//2
-            t.lr_adjustment_period = (len(trainset)//t.batch_size)//2
+            t.es_period = (len(trainset)//t.batch_size)#//2
+            t.lr_adjustment_period = (len(trainset)//t.batch_size)#//2
             wandb.config.update({'es_period': t.es_period}, allow_val_change=True)
             wandb.config.update({'lr_adjustment_period': t.lr_adjustment_period}, allow_val_change=True)
             
             # create trainer
-            trainer = Trainer(model, trainloader, l, validloader=validloader, metrics={'acc': acc}, scorer=scorer, wandb_run = run, param_groups=param_groups, **t)
+            trainer = TrainerNew(model, trainloader, l, input_idxs = [1], output_idxs = [2], validloader=validloader, metrics={'acc': acc}, scorer=scorer, wandb_run = run, param_groups=param_groups, lr_decay_type=None, **t)
             trainer.fit()
             # valid and test acc of best model
             model.load_state_dict(torch.load(trainer.es_path+'checkpoint.pt'))

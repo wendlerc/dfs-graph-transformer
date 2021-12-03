@@ -6,7 +6,7 @@ model_dir_pattern: "./models/%s/"
 label_smoothing_alpha: 0
 n_hidden: 0
 lr_encoder: 0.000003
-lr_head: 0.003
+lr_head: 0.000003
 lr_adjustment_period: 300
 n_epochs: 25
 lr_patience: 3
@@ -15,20 +15,20 @@ minimal_lr: 0.00000006
 batch_size: 50
 accumulate_grads: 2
 gpu_id: 0
-es_period: 300
+es_period: null
 es_patience: 10
 es_improvement: 0.0
 pretrained_class: 'DFSCodeSeq2SeqFC'
-pretrained_project: 'pubchem'
+pretrained_project: 'pubchem_newdataloader'
 pretrained_entity: 'dfstransformer'
-pretrained_model: 'bert-10M'
+pretrained_model: 'r2r-newloader'
 pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
 use_local_yaml: False
 pretrained_dir: null
 es_path: null
 load_last: True
-use_min: True
-fingerprint: 'cls3' # mean, max, sum, cls-mean-max
+use_min: False
+fingerprint: 'cls' # mean, max, sum, cls-mean-max
 strict: True
 dataset: 'bbbp'
 seed: 123

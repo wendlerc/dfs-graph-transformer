@@ -69,7 +69,14 @@ class TrainerNew():
             self.device = 'cpu'
         self.es_improvement = es_improvement
         self.es_patience = es_patience
-        self.es_period = es_period
+        if es_period is None:
+            n_examples = len(loader.dataset)
+            batch_size = loader.batch_size
+            steps_per_epoch = n_examples//batch_size
+            self.es_period = steps_per_epoch
+        else:
+            self.es_period = es_period
+        print('es period', self.es_period)
         if es_path is None:
             self.es_path = "./models/tmp/%d/"%np.random.randint(100000)
         else:
@@ -83,7 +90,9 @@ class TrainerNew():
             self.optim = self.optimizer(model.parameters(), betas=adam_betas, 
                                         eps=adam_eps, lr=self.lr, 
                                         weight_decay=weight_decay)
-        if lr_decay_type == 'linear':
+        if lr_decay_type == None:
+            lr_lambda = lambda t: 1.
+        elif lr_decay_type == 'linear':
             def lr_lambda(current_step: int):
                 if current_step < self.lr_warmup:
                     return float(current_step) / float(max(1, self.lr_warmup))
@@ -120,9 +129,8 @@ class TrainerNew():
                     if step % self.accumulate_grads == 0: #bei 0 wollen wir das
                         optim.zero_grad()
                     
-                    data = [to_cuda(d) for d in data]
-                    inputs = [data[i] for i in self.input_idxs]
-                    outputs = [data[i] for i in self.output_idxs]
+                    inputs = [to_cuda(data[i]) for i in self.input_idxs]
+                    outputs = [to_cuda(data[i]) for i in self.output_idxs]
 
                     pred = self.model(*inputs)
                     loss = self.loss(pred, outputs)
@@ -149,11 +157,9 @@ class TrainerNew():
                     log['learning rate'] = curr_lr
                     pbar.set_description(pbar_string)
                     self.wandb.log(log)
-                    del inputs
-                    del outputs
-                    del data
                             
                     if (step + 1) % self.es_period == 0:
+                        print('scoring...')
                         self.model.eval()
                         if self.scorer is not None:
                             with torch.no_grad():
@@ -168,9 +174,8 @@ class TrainerNew():
                                 pbar_valid = tqdm.tqdm(self.validloader)
                                 for i, data in enumerate(pbar_valid):
                                     valid_log = {}
-                                    data = [to_cuda(d) for d in data]
-                                    inputs = [data[i] for i in self.input_idxs]
-                                    outputs = [data[i] for i in self.output_idxs]
+                                    inputs = [to_cuda(data[i]) for i in self.input_idxs]
+                                    outputs = [to_cuda(data[i]) for i in self.output_idxs]
                                     pred = self.model(*inputs)
                                     loss = self.loss(pred, outputs).item()
                                     valid_loss = (valid_loss*i + loss)/(i+1)
@@ -193,13 +198,11 @@ class TrainerNew():
                                 self.early_stopping(epoch_loss, model)
                             else: 
                                 self.early_stopping(self.es_argument(log), model)
-                        del valid_log
-                        del inputs
-                        del outputs
-                        del data
                         
                         # END CONDITIONS
                         if self.early_stopping.early_stop or curr_lr < self.minimal_lr:
+                            print('early stopping condition fired')
+                            print('early stop', self.early_stopping.early_stop, 'lr', curr_lr)
                             self.stop_training = True
                             break
                         

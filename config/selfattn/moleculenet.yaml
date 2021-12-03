@@ -14,9 +14,9 @@ gpu_id: 0
 es_patience: 10
 es_improvement: 0.0
 pretrained_class: 'DFSCodeSeq2SeqFC'
-pretrained_project: 'pubchem_plus_properties'
+pretrained_project: 'pubchem_newdataloader'
 pretrained_entity: 'dfstransformer'
-pretrained_model: 'bertr2r-1M-euler' #rand2min-1M'
+pretrained_model: 'r2r-newloader' #rand2min-1M'
 pretrained_yaml: './config/selfattn/model/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
 use_local_yaml: False
 pretrained_dir: null
