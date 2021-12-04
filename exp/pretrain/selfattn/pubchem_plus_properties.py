@@ -153,8 +153,10 @@ if __name__ == "__main__":
     metrics = {field:functools.partial(seq_acc_wrapper, idx=idx) for idx, field in enumerate(fields)}
     for key in d.molecular_properties:
         metrics[key] = functools.partial(property_score, key=key)
-    metrics['mean_acc'] = functools.partial(property_score_mean, classification=True) 
-    metrics['mean_r2'] = functools.partial(property_score_mean, classification=False)
+    
+    if len(config.data.molecular_properties) > 0:
+        metrics['mean_acc'] = functools.partial(property_score_mean, classification=True) 
+        metrics['mean_r2'] = functools.partial(property_score_mean, classification=False)
         
     encoder = DFSCodeSeq2SeqFC(**m)
     head_specs = {}
