@@ -248,11 +248,11 @@ if __name__ == "__main__":
                 validdata = Deepchem2TorchGeometric(valid_X, valid_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
                 testdata = Deepchem2TorchGeometric(test_X, test_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
                 
-                trainloader = DataLoader(traindata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
+                trainloader = DataLoader(traindata, batch_size=t.batch_size, shuffle=True, pin_memory=True, 
                                 collate_fn=coll_train, num_workers=t.num_workers)
-                validloader = DataLoader(validdata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
+                validloader = DataLoader(validdata, batch_size=t.batch_size, shuffle=False, pin_memory=True, 
                                 collate_fn=coll_val, num_workers=t.num_workers)
-                testloader = DataLoader(testdata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
+                testloader = DataLoader(testdata, batch_size=t.batch_size, shuffle=False, pin_memory=True, 
                                 collate_fn=coll_val, num_workers=t.num_workers)
                 
                 

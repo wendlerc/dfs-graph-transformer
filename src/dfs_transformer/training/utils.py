@@ -284,3 +284,60 @@ def collate_downstream(dlist, alpha=0, use_loops=False, use_min=False):
     dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
                  for key, values in dfs_codes.items()}
     return smiles, dfs_codes, y
+
+
+def collate_downstream_qm9(dlist, alpha=0, use_loops=False, use_min=False):
+    dfs_codes = defaultdict(list)
+    smiles = []
+    node_batch = [] 
+    edge_batch = []
+    z_batch = []
+    y_batch = []
+    rnd_code_batch = []
+    if use_loops:
+        loop = torch.tensor(bond_features(None)).unsqueeze(0)
+    for d in dlist:
+        edge_features = d.edge_features.clone()
+        if use_min:
+            code = d.min_dfs_code.clone()
+            index = d.min_dfs_index.clone()
+        else:
+            code, index = dfs_code.rnd_dfs_code_from_torch_geometric(d, d.z.numpy().tolist(), 
+                                                                     np.argmax(d.edge_attr.numpy(), axis=1).tolist())
+            
+            code = torch.tensor(np.asarray(code), dtype=torch.long)
+            index = torch.tensor(np.asarray(index), dtype=torch.long)
+        
+        if use_loops:
+            edge_features = torch.cat((edge_features, loop), dim=0)
+            vids = torch.argsort(index).unsqueeze(1)
+            eids = torch.ones_like(vids)*(edge_features.shape[0] - 1)
+            nattr = d.z[vids]
+            eattr = torch.ones_like(vids)*4 # 4 stands for loop
+            arange = index[vids]
+            loops = torch.cat((arange, arange, nattr, eattr, nattr, vids, eids, vids), dim=1)
+            code = torch.cat((code, loops), dim=0).clone()
+        
+        rnd_code_batch += [code]
+        node_batch += [d.node_features.clone()]
+        edge_batch += [edge_features]
+        y_batch += [d.y.clone()]
+        smiles += [deepcopy(d.smiles)]        
+        z_batch += [d.z.clone().unsqueeze(0)]
+    z = torch.cat(z_batch, dim=0)
+    y = torch.cat(y_batch).unsqueeze(1)
+    y = (1-alpha)*y + alpha/2
+    
+    for inp, nfeats, efeats in zip(rnd_code_batch, node_batch, edge_batch):
+        dfs_codes['dfs_from'] += [inp[:, 0]]
+        dfs_codes['dfs_to'] += [inp[:, 1]]
+        atm_from_feats = nfeats[inp[:, -3]]
+        atm_to_feats = nfeats[inp[:, -1]]
+        bnd_feats = efeats[inp[:, -2]]
+        dfs_codes['atm_from'] += [atm_from_feats]
+        dfs_codes['atm_to'] += [atm_to_feats]
+        dfs_codes['bnd'] += [bnd_feats]
+
+    dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
+                 for key, values in dfs_codes.items()}
+    return smiles, dfs_codes, z,  y

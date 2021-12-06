@@ -1,0 +1,34 @@
+data_dir_pattern: "./datasets/mymoleculenet/%s/"
+#load_dir_pattern: "/cluster/work/pueschel/mymoleculenet_plus_features/%s/1/"
+load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
+#model_dir_pattern: "/cluster/scratch/wendlerc/models/%s/"
+model_dir_pattern: "./models/%s/"
+label_smoothing_alpha: 0
+n_hidden: 0
+lr_encoder: 0.000003
+lr_head: 0.000003
+lr_adjustment_period: 300
+n_epochs: 25
+lr_patience: 3
+decay_factor: 0.8
+minimal_lr: 0.00000006
+batch_size: 200
+accumulate_grads: 1
+gpu_id: 0
+es_period: null
+es_patience: 10
+es_improvement: 0.0
+pretrained_class: 'DFSCodeSeq2SeqFC'
+pretrained_project: 'pubchem_newdataloader'
+pretrained_entity: 'dfstransformer'
+pretrained_model: 'm2m-noprop'
+pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
+use_local_yaml: False
+pretrained_dir: null
+es_path: null
+load_last: True
+use_min: False
+fingerprint: 'cls' # mean, max, sum, cls-mean-max
+strict: True
+seed: 123
+num_workers: 8
