@@ -24,6 +24,7 @@ from copy import deepcopy
 import dfs_code
 from chemprop.features.featurization import bond_features
 import pickle
+import glob
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -135,6 +136,8 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--model', type=str, default=None)
     parser.add_argument('--n_hidden', type=int, default=0)
+    parser.add_argument('--n_seeds', type=int, default=1)
+    parser.add_argument('--data_dir', type=str, default=None)
     parser.add_argument('--overwrite', type=json.loads, default="{}")
     args = parser.parse_args()
         
@@ -150,6 +153,9 @@ if __name__ == "__main__":
                 config[key][key1] = value1
         else:
             config[key] = value
+    
+    if args.data_dir is not None:
+        config['data_dir_pattern'] = args.data_dir+"/%s/"
     
     config.data = d
     
@@ -206,90 +212,91 @@ if __name__ == "__main__":
         
         wandb.config.update({'es_path': model_dir}, allow_val_change=True)
         t.es_path = model_dir
-        
-        for rep in range(10):
-            n_encoding = encoder.get_n_encoding(t.fingerprint)
-            model = TransformerPlusHead(deepcopy(encoder), n_encoding, 1, n_hidden=t.n_hidden, fingerprint=t.fingerprint)
-            model.to(device)
+        n_splits = len(glob.glob1(t.data_dir_pattern%dataset, "[0-9]*"))
+        for seed in range(args.n_seeds):
+            for rep in range(n_splits):
+                n_encoding = encoder.get_n_encoding(t.fingerprint)
+                model = TransformerPlusHead(deepcopy(encoder), n_encoding, 1, n_hidden=t.n_hidden, fingerprint=t.fingerprint)
+                model.to(device)
+                
+                param_groups = [
+                    {'amsgrad': False,
+                     'betas': (0.9,0.98),
+                     'eps': 1e-09,
+                     'lr': t.lr_encoder,
+                     'params': model.encoder.parameters(),
+                     'weight_decay': 0},
+                    {'amsgrad': False,
+                     'betas': (0.9, 0.999),
+                     'eps': 1e-08,
+                     'lr': t.lr_head,
+                     'params': model.head.parameters(),
+                     'weight_decay': 0}
+                ]
+                
+                #make dataset
+                trainset = pd.read_csv(t.data_dir_pattern%dataset+"%d/train.csv"%rep)
+                validset = pd.read_csv(t.data_dir_pattern%dataset+"%d/valid.csv"%rep)
+                testset = pd.read_csv(t.data_dir_pattern%dataset+"%d/test.csv"%rep)
+                train_X, train_y = trainset["smiles"].to_numpy(), trainset["target"].to_numpy()
+                valid_X, valid_y = validset["smiles"].to_numpy(), validset["target"].to_numpy()
+                test_X, test_y = testset["smiles"].to_numpy(), testset["target"].to_numpy()
+                
             
-            param_groups = [
-                {'amsgrad': False,
-                 'betas': (0.9,0.98),
-                 'eps': 1e-09,
-                 'lr': t.lr_encoder,
-                 'params': model.encoder.parameters(),
-                 'weight_decay': 0},
-                {'amsgrad': False,
-                 'betas': (0.9, 0.999),
-                 'eps': 1e-08,
-                 'lr': t.lr_head,
-                 'params': model.head.parameters(),
-                 'weight_decay': 0}
-            ]
-            
-            #make dataset
-            trainset = pd.read_csv(t.data_dir_pattern%dataset+"%d/train.csv"%rep)
-            validset = pd.read_csv(t.data_dir_pattern%dataset+"%d/valid.csv"%rep)
-            testset = pd.read_csv(t.data_dir_pattern%dataset+"%d/test.csv"%rep)
-            train_X, train_y = trainset["smiles"].to_numpy(), trainset["target"].to_numpy()
-            valid_X, valid_y = validset["smiles"].to_numpy(), validset["target"].to_numpy()
-            test_X, test_y = testset["smiles"].to_numpy(), testset["target"].to_numpy()
-            
-        
-            
-            traindata = Deepchem2TorchGeometric(train_X, train_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
-            validdata = Deepchem2TorchGeometric(valid_X, valid_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
-            testdata = Deepchem2TorchGeometric(test_X, test_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
-            
-            trainloader = DataLoader(traindata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
-                            collate_fn=coll_train, num_workers=t.num_workers)
-            validloader = DataLoader(validdata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
-                            collate_fn=coll_val, num_workers=t.num_workers)
-            testloader = DataLoader(testdata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
-                            collate_fn=coll_val, num_workers=t.num_workers)
-            
-            
-            
-            bce = torch.nn.BCEWithLogitsLoss()
-            l = functools.partial(loss, ce=bce)
-            scorer = functools.partial(score, loader=validloader, device=device, onlyroc=True)
-            
-            t.es_period = (len(trainset)//t.batch_size)#//2
-            t.lr_adjustment_period = (len(trainset)//t.batch_size)#//2
-            wandb.config.update({'es_period': t.es_period}, allow_val_change=True)
-            wandb.config.update({'lr_adjustment_period': t.lr_adjustment_period}, allow_val_change=True)
-            
-            # create trainer
-            trainer = TrainerNew(model, trainloader, l, input_idxs = [1], output_idxs = [2], validloader=validloader, metrics={'acc': acc}, scorer=scorer, wandb_run = run, param_groups=param_groups, lr_decay_type=None, **t)
-            trainer.fit()
-            # valid and test acc of best model
-            model.load_state_dict(torch.load(trainer.es_path+'checkpoint.pt'))
-            
-            roc, prc = score(model, testloader, device, onlyroc=False)
-            if not t.use_min:
-                for i in range(19):
-                    roc2, prc2 = score(model, testloader, device, onlyroc=False)
-                    roc += roc2
-                    prc += prc2
-                roc /= 20
-                prc /= 20
-            wandb.log({'roc_test':roc, 'prc_test':prc})
-            roc_avgs += [roc]
-            prc_avgs += [prc]
-            
-            roc, prc = score(model, validloader, device, onlyroc=False)
-            if not t.use_min:
-                for i in range(19):
-                    roc2, prc2 = score(model, validloader, device, onlyroc=False)
-                    roc += roc2
-                    prc += prc2
-                roc /= 20
-                prc /= 20
-            wandb.log({'roc_valid':roc, 'prc_valid':prc})
-            roc_avgs_valid += [roc]
-            prc_avgs_valid += [prc]
-            
-            del model
+                
+                traindata = Deepchem2TorchGeometric(train_X, train_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
+                validdata = Deepchem2TorchGeometric(valid_X, valid_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
+                testdata = Deepchem2TorchGeometric(test_X, test_y, loaddir=t.load_dir_pattern%dataset, features="chemprop")
+                
+                trainloader = DataLoader(traindata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
+                                collate_fn=coll_train, num_workers=t.num_workers)
+                validloader = DataLoader(validdata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
+                                collate_fn=coll_val, num_workers=t.num_workers)
+                testloader = DataLoader(testdata, batch_size=t.batch_size, shuffle=False, pin_memory=False, 
+                                collate_fn=coll_val, num_workers=t.num_workers)
+                
+                
+                
+                bce = torch.nn.BCEWithLogitsLoss()
+                l = functools.partial(loss, ce=bce)
+                scorer = functools.partial(score, loader=validloader, device=device, onlyroc=True)
+                
+                t.es_period = (len(trainset)//t.batch_size)#//2
+                t.lr_adjustment_period = (len(trainset)//t.batch_size)#//2
+                wandb.config.update({'es_period': t.es_period}, allow_val_change=True)
+                wandb.config.update({'lr_adjustment_period': t.lr_adjustment_period}, allow_val_change=True)
+                
+                # create trainer
+                trainer = TrainerNew(model, trainloader, l, input_idxs = [1], output_idxs = [2], validloader=validloader, metrics={'acc': acc}, scorer=scorer, wandb_run = run, param_groups=param_groups, lr_decay_type=None, **t)
+                trainer.fit()
+                # valid and test acc of best model
+                model.load_state_dict(torch.load(trainer.es_path+'checkpoint.pt'))
+                
+                roc, prc = score(model, testloader, device, onlyroc=False)
+                if not t.use_min:
+                    for i in range(19):
+                        roc2, prc2 = score(model, testloader, device, onlyroc=False)
+                        roc += roc2
+                        prc += prc2
+                    roc /= 20
+                    prc /= 20
+                wandb.log({'roc_test':roc, 'prc_test':prc})
+                roc_avgs += [roc]
+                prc_avgs += [prc]
+                
+                roc, prc = score(model, validloader, device, onlyroc=False)
+                if not t.use_min:
+                    for i in range(19):
+                        roc2, prc2 = score(model, validloader, device, onlyroc=False)
+                        roc += roc2
+                        prc += prc2
+                    roc /= 20
+                    prc /= 20
+                wandb.log({'roc_valid':roc, 'prc_valid':prc})
+                roc_avgs_valid += [roc]
+                prc_avgs_valid += [prc]
+                
+                del model
         wandb.log({'roc_test_mean':np.mean(roc_avgs), 'prc_test_mean':np.mean(prc_avgs)})
         wandb.log({'roc_test_std':np.std(roc_avgs), 'prc_test_std':np.std(prc_avgs)})
         wandb.log({'roc_valid_mean':np.mean(roc_avgs_valid), 'prc_valid_mean':np.mean(prc_avgs_valid)})

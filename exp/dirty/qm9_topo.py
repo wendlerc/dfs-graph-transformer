@@ -167,7 +167,7 @@ class QM9DFSCodes(Dataset):
         if self.edge_transform:
             d_tensors['feat_edge'] = self.edge_transform(d_tensors['feat_edge'])
         
-        d_tensors['target'] = data.y[:, self.target_idx]
+        d_tensors['target'] = data.y[:, self.target_idx].clone()
         return d_tensors
     
     def shuffle(self):
