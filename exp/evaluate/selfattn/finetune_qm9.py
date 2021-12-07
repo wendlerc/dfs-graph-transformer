@@ -116,7 +116,7 @@ class TransformerPlusHead(nn.Module):
         self.mean = mean
         self.std = std
         self.register_buffer('initial_atomref', atomref)
-        self.atomref = nn.Embedding(100, 1)
+        self.atomref = nn.Embedding(119, 1) # 119 better for batch processing because then we don't have -1 in the missing spots
         if atomref is not None:
             self.atomref.weight.data.copy_(atomref)
     
@@ -127,7 +127,9 @@ class TransformerPlusHead(nn.Module):
             out = out * self.std + self.mean
         
         if self.atomref is not None:
-            out = out + torch.sum(self.atomref(z), axis=1)
+            #print(self.atomref(z))
+            #print(self.atomref(z).shape)
+            out = out + torch.sum(self.atomref(z), axis=1) # does not make sense if the data has no Hs
         
         return out
     
@@ -231,22 +233,12 @@ if __name__ == "__main__":
     testloader = DataLoader(testdata, batch_size=t.batch_size, shuffle=False, pin_memory=True, 
                     collate_fn=coll_val, num_workers=t.num_workers)
     
-    # TODO:
-    # based on https://schnetpack.readthedocs.io/en/stable/tutorials/tutorial_02_qm9.html
-    # and https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/nn/models/schnet.html#SchNet
-    # target_idx = traindata.target_idx
-    # for data in trainloader:
-    #     data = data.to(device)
-    #     atomU0s = torch.tensor(atomrefs[target_idx], device=device)[torch.argmax(data.x[:, :5], axis=1)]
-    #     target_modular = scatter(atomU0s, data.batch, dim=-1, reduce='sum')
-    #     target_vec += [(data.y[:, target_idx] - target_modular).detach().cpu().numpy()]
-    # target_vec = np.concatenate(target_vec, axis=0)
+
     
-    # target_mean = np.mean(target_vec)
-    # target_std = np.std(target_vec)
+    target_mean, target_std = traindata.compute_mean_and_std()
     
     model = TransformerPlusHead(deepcopy(encoder), n_encoding, 1, n_hidden=t.n_hidden, fingerprint=t.fingerprint, 
-                                mean = traindata.y.mean(), std=traindata.y.std()) #TODO: atomref=torch.tensor(atomrefs[target_idx]))
+                                mean = target_mean, std = target_std, atomref = traindata.atomref())
     model.to(device)
     
     param_groups = [

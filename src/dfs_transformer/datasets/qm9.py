@@ -203,12 +203,29 @@ class QM9(Dataset):
                 pickle.dump(d_dict, f)
             
             
-            
-            
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
         return self.data[idx]
+    
+    def atomref(self):
+        if self.target_idx in atomrefs:
+            out = torch.zeros(119) #either here 119 or down below -1
+            out[torch.tensor([1, 6, 7, 8, 9])] = torch.tensor(atomrefs[self.target_idx])
+            return out.view(-1, 1)
+        return None
+    
+    def compute_mean_and_std(self):
+        # based on https://schnetpack.readthedocs.io/en/stable/tutorials/tutorial_02_qm9.html
+        # and https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/nn/models/schnet.html#SchNet
+        ref = self.atomref()
+        residuals = []
+        for data in self.data:
+            modular = ref[data.z].sum()
+            residual = data.y - modular
+            residuals += [residual.detach().cpu().numpy()]
+        return np.mean(residuals), np.std(residuals)
+            
 
 
