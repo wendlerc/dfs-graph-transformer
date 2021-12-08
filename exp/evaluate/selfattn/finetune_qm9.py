@@ -119,17 +119,21 @@ class TransformerPlusHead(nn.Module):
         self.atomref = nn.Embedding(119, 1) # 119 better for batch processing because then we don't have -1 in the missing spots
         if atomref is not None:
             self.atomref.weight.data.copy_(atomref)
+        else:
+            self.atomref.weight.data.copy_(torch.zeros((119, 1)))
     
     def forward(self, dfs_codes, z):
+        #return torch.sum(self.atomref(z), axis=1) # this should have 1769.626346 error...
+    
         features = self.encoder.encode(dfs_codes, method=self.fingerprint)
         out = self.head(features)
         if self.mean is not None and self.std is not None:
             out = out * self.std + self.mean
         
-        if self.atomref is not None:
+        #if self.atomref is not None:
             #print(self.atomref(z))
             #print(self.atomref(z).shape)
-            out = out + torch.sum(self.atomref(z), axis=1) # does not make sense if the data has no Hs
+        #    out = out + torch.sum(self.atomref(z), axis=1) # does not make sense if the data has no Hs
         
         return out
     
@@ -237,8 +241,11 @@ if __name__ == "__main__":
     
     target_mean, target_std = traindata.compute_mean_and_std()
     
-    model = TransformerPlusHead(deepcopy(encoder), n_encoding, 1, n_hidden=t.n_hidden, fingerprint=t.fingerprint, 
-                                mean = target_mean, std = target_std, atomref = traindata.atomref())
+    model = TransformerPlusHead(deepcopy(encoder), n_encoding, 1, n_hidden=t.n_hidden, fingerprint=t.fingerprint,
+                                mean=target_mean, std=target_std) 
+                                #TODO: i think the data is already normalized by the atomic energies in the deepchem version
+                                # so the normalization does nto make sense ...
+                                # mean = target_mean, std = target_std, atomref=None)# atomref = traindata.atomref())
     model.to(device)
     
     param_groups = [

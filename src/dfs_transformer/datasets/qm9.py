@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import dfs_code
-from .utils import smiles2graph
+from .utils import smiles2graph, smiles2z
 
 import os
 import pickle
@@ -176,7 +176,8 @@ class QM9(Dataset):
                 d_dict[smiles] = d
                 c_dict[smiles] = {'min_dfs_code': min_code, 'min_dfs_index': min_index}
             z = torch.zeros(30, dtype=torch.long) 
-            z[:len(d['z'])] = d['z']
+            dz = smiles2z(smiles, True, self.addLoops) #TODO: careful this is a hack, because we need the Hs also for the noH version..
+            z[:len(dz)] = dz
             x = d['x']
             if self.features == "old":
                 h = x[:, -1].clone().detach().long()
@@ -217,6 +218,8 @@ class QM9(Dataset):
         return None
     
     def compute_mean_and_std(self):
+        return np.mean(self.y), np.std(self.y)
+        """raise NotImplementedError("deepchem version is already normalized by modular part")
         # based on https://schnetpack.readthedocs.io/en/stable/tutorials/tutorial_02_qm9.html
         # and https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/nn/models/schnet.html#SchNet
         ref = self.atomref()
@@ -226,6 +229,16 @@ class QM9(Dataset):
             residual = data.y - modular
             residuals += [residual.detach().cpu().numpy()]
         return np.mean(residuals), np.std(residuals)
+        """
+        
+    def compute_torch_geometric_version(self):
+        ref = self.atomref()
+        residuals = []
+        for data in self.data:
+            modular = ref[data.z].sum()
+            residual = data.y + modular
+            residuals += [residual.detach().cpu().numpy()]
+        return residuals
             
 
 

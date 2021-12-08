@@ -21,7 +21,7 @@ es_improvement: 0.0
 pretrained_class: 'DFSCodeSeq2SeqFC'
 pretrained_project: 'pubchem_newdataloader'
 pretrained_entity: 'dfstransformer'
-pretrained_model: 'r2r-newloader'
+pretrained_model: 'm2m-noprop'
 pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
 use_local_yaml: False
 pretrained_dir: null

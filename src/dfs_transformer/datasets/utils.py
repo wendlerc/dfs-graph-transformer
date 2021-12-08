@@ -330,3 +330,38 @@ def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edge
     d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
                     edge_attr=edge_attr, atom_features=atom_chemprop, bond_features=bond_chemprop)
     return d
+
+def smiles2z(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np.inf):
+    """
+    Parameters
+    ----------
+    smiles : string
+        smiles representation of molecule.
+    useHs : bool
+        whether to model H atoms as nodes. The default is False.
+    addLoops : bool
+        whether to add loops to the atoms. The default is False.
+    max_nodes : int, optional
+        the maximum number of atoms. The default is 100.
+    max_edges : int, optional
+        the maximum number of edges. The default is 200.
+
+    Returns
+    -------
+    d :  torch geometric data object containing the graph or None in case of failure
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if useHs:
+        mol = Chem.rdmolops.AddHs(mol)        
+    N = mol.GetNumAtoms()
+
+    atomic_number = []
+    for atom in mol.GetAtoms():
+        atomic_number.append(atom.GetAtomicNum())
+        
+    if len(atomic_number) > max_nodes:
+        return None
+    return torch.tensor(atomic_number, dtype=torch.long)
+    
+
+    

@@ -8,11 +8,11 @@ n_hidden: 0
 lr_encoder: 0.000003
 lr_head: 0.000003
 lr_adjustment_period: 300
-n_epochs: 25
+n_epochs: 100
 lr_patience: 3
 decay_factor: 0.8
 minimal_lr: 0.00000006
-batch_size: 200
+batch_size: 1000
 accumulate_grads: 1
 gpu_id: 0
 es_period: null
@@ -21,13 +21,13 @@ es_improvement: 0.0
 pretrained_class: 'DFSCodeSeq2SeqFC'
 pretrained_project: 'pubchem_newdataloader'
 pretrained_entity: 'dfstransformer'
-pretrained_model: 'm2m-noprop'
+pretrained_model: 'm2m-newloader'
 pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
 use_local_yaml: False
 pretrained_dir: null
 es_path: null
 load_last: True
-use_min: False
+use_min: True
 fingerprint: 'cls' # mean, max, sum, cls-mean-max
 strict: True
 seed: 123

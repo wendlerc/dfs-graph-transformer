@@ -68,6 +68,11 @@ def load_selfattn(t, device):
     if model_dir is not None:
         model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
     model = model.encoder
+    
+    if cfg.training.mode in ["rnd2min", "rnd2rnd"]:
+        m['use_min'] = False
+    else:
+        m['use_min'] = True
         
     return model, m
 
@@ -179,7 +184,7 @@ if __name__ == "__main__":
     encoder, m = load_selfattn(t, device)
     print('loaded pretrained model')
     if "use_min" not in args.overwrite.keys():
-        config["use_min"] = m.missing_value == -1
+        config["use_min"] = m.use_min
     
     if "use_loops" not in m:
         m.use_loops = False
