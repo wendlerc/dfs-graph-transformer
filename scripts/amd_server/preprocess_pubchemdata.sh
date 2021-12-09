@@ -1,8 +1,7 @@
 #!/bin/bash
 DIR=$1
-TIME_LIMIT=$2
 
-for i in {0..63}
+for i in {0..9}
 do
-    python scripts/pubchem/compute_data.py with use_Hs=False add_loops=False nr=$i total=64 path=$DIR & 
+    python scripts/amd_server/pubchem/compute_data.py with use_Hs=True add_loops=False nr=$i total=10 path=$DIR & 
 done

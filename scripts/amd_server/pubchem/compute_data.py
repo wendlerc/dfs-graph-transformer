@@ -33,8 +33,8 @@ def main(path, n_splits, nr, total, max_nodes, max_edges, time_limit, log_level,
     logging.basicConfig(level=log_level)
     for i in range(n_splits):
         if i % total == nr:
-            dname = glob.glob(path+"/%d/min_dfs_codes_split*.json"%(i+1))[0]
-            didx = int(dname.split("split")[-1][:-5])
+            dname = glob.glob(path+"/%d/min_dfs_codes_split*.pkl"%(i+1))[0]
+            didx = int(dname.split("split")[-1][:-4])
             with open(path+"/%d/min_dfs_codes_split%d.pkl"%(i+1, didx), 'rb') as f:
                 codes = pickle.load(f)
             d_dict = {}
