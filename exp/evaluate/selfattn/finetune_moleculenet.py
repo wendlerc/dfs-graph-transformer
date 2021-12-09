@@ -144,6 +144,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_seeds', type=int, default=1)
     parser.add_argument('--data_dir', type=str, default=None)
     parser.add_argument('--overwrite', type=json.loads, default="{}")
+    parser.add_argument('--random', action='store_true')
     args = parser.parse_args()
         
     with open(args.yaml) as file:
@@ -175,9 +176,10 @@ if __name__ == "__main__":
     t = config
     print(t)
 
-    random.seed(t.seed)
-    torch.manual_seed(t.seed)
-    np.random.seed(t.seed)
+    if not args.random:
+        random.seed(t.seed)
+        torch.manual_seed(t.seed)
+        np.random.seed(t.seed)
     
     device = torch.device('cuda:%d'%t.gpu_id if torch.cuda.is_available()  else 'cpu')
     
@@ -195,6 +197,8 @@ if __name__ == "__main__":
     coll_val = functools.partial(collate_fn, use_loops=m.use_loops, use_min=t.use_min, alpha=0)
     
     datasets = ['bbbp', 'clintox', 'tox21', 'hiv']
+    
+    datasets = [fname.split('/')[-1] for fname in glob.glob(t.data_dir_pattern[:-3]+"*")]
     
     for idx, dataset in enumerate(datasets):
         run = wandb.init(args.wandb_mode, 

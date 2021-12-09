@@ -362,6 +362,10 @@ def smiles2z(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np
     if len(atomic_number) > max_nodes:
         return None
     return torch.tensor(atomic_number, dtype=torch.long)
+
+def smiles2mindfscode(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np.inf):
+    d = smiles2graph(smiles, useHs=useHs, addLoops=addLoops, max_nodes=max_nodes, max_edges=max_edges)
+    return dfs_code.min_dfs_code_from_edgeindex(d.edge_index.numpy(), d.z.numpy().tolist(), np.argmax(d.edge_attr.numpy(), axis=1).tolist())
     
 
     

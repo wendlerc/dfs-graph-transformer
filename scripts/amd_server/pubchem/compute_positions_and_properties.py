@@ -31,7 +31,7 @@ def main(path, n_splits, nr, total, log_level, use_Hs, _run, _log):
             p_dict = {}
             for smiles, code in tqdm.tqdm(codes.items()):
                 try:
-                    props, vals = smiles2properties(smiles, useHs=use_Hs)
+                    props, vals = smiles2properties(smiles, useHs=False)
                     pos = smiles2positions(smiles, useHs=use_Hs)
                     data = {prop:val for prop, val in zip(props, vals)}
                     d_dict[smiles] = data

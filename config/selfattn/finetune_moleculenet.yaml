@@ -27,7 +27,6 @@ use_local_yaml: False
 pretrained_dir: null
 es_path: null
 load_last: True
-use_min: False
 fingerprint: 'cls' # mean, max, sum, cls-mean-max
 strict: True
 dataset: 'bbbp'
