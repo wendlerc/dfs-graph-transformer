@@ -8,13 +8,14 @@ import torch
 import tqdm
 from .utils import get_n_files
 import torch.nn.functional as F
+from torch_geometric.nn.models.schnet import GaussianSmearing
 
 
 class PubChem(Dataset):
     """PubChem dataset of molecules and minimal DFS codes."""
     def __init__(self, path, n_used = None, n_splits = None, max_nodes=np.inf,
                  max_edges=np.inf, useHs=False, addLoops=False, memoryEfficient=False,
-                 transform=None, exclude=[], noFeatures=False,
+                 transform=None, exclude=[], noFeatures=False, useDists=False,
                  molecular_properties=None):
         """
         Parameters
@@ -46,6 +47,9 @@ class PubChem(Dataset):
         self.max_edges = max_edges
         self.exclude = set(exclude)
         self.noFeatures = noFeatures
+        self.useDists = useDists
+        if useDists:
+            self.dist_emb = GaussianSmearing(0., 4., 50)
         self.molecular_properties = molecular_properties
         self.prepare()
         
@@ -54,6 +58,7 @@ class PubChem(Dataset):
         codes_all = {}
         d_all = {}
         props_all = {}
+        pos_all = {}
         perm = np.random.permutation(self.n_splits)
         for i in tqdm.tqdm(perm[:self.n_used]):
             dname = glob.glob(self.path+"/%d/min_dfs_codes_split*.pkl"%(i+1))[0]
@@ -79,6 +84,15 @@ class PubChem(Dataset):
                     for key, val in p_dict.items():
                         if key not in self.exclude:
                             props_all[key] = val
+            
+            if self.useDists:
+                dname4 = self.path+"/%d/positions_split%d.pkl"%(i+1, didx)
+                with open(dname4, 'rb') as f:
+                    pos_dict = pickle.load(f)
+                    for key, val in pos_dict.items():
+                        if key not in self.exclude:
+                            pos_all[key] = val
+                
                 
         
         for smiles, code in tqdm.tqdm(codes_all.items()):
@@ -100,6 +114,14 @@ class PubChem(Dataset):
                 else:
                     node_features = torch.tensor(d['atom_features'], dtype=torch.float32)
                     edge_features = torch.tensor(d['bond_features'], dtype=torch.float32)
+                    
+                if self.useDists:
+                    dists = []
+                    pos = np.asarray(pos_all[smiles])
+                    for e in d['edge_index'].T:
+                        dists += [np.linalg.norm(pos[e[0]] - pos[e[1]])]
+                    dist_feats = self.dist_emb(torch.tensor(dists))
+                    edge_features = torch.cat((edge_features, dist_feats), dim=1)
                 
                 if self.molecular_properties is not None:
                     data_ = Data({"z":z,
