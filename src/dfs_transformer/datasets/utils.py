@@ -364,8 +364,67 @@ def smiles2z(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np
     return torch.tensor(atomic_number, dtype=torch.long)
 
 def smiles2mindfscode(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np.inf):
-    d = smiles2graph(smiles, useHs=useHs, addLoops=addLoops, max_nodes=max_nodes, max_edges=max_edges)
-    return dfs_code.min_dfs_code_from_edgeindex(d.edge_index.numpy(), d.z.numpy().tolist(), np.argmax(d.edge_attr.numpy(), axis=1).tolist())
+    mol = Chem.MolFromSmiles(smiles)
+    if useHs:
+        mol = Chem.rdmolops.AddHs(mol)        
+    N = mol.GetNumAtoms()
+
+    atomic_number = []
+    for atom in mol.GetAtoms():
+        atomic_number.append(atom.GetAtomicNum())
+
+    if len(atomic_number) > max_nodes:
+        return None
+    z = np.asarray(atomic_number, dtype=np.int64)
+    
+
+    row, col, edge_type = [], [], []
+    for bond in mol.GetBonds():
+        start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+        row += [start, end]
+        col += [end, start]
+        edge_type += 2 * [bonds[bond.GetBondType()]]
+        
+    if addLoops or len(edge_type) == 0:
+        for vidx, anr in enumerate(z.numpy()):
+            row += [vidx, vidx]
+            col += [vidx, vidx]
+            edge_type += 2*[bonds["loop"]]
+            
+    if len(edge_type) > 2*max_edges:
+        return None
+    
+    edge_index = torch.tensor([row, col], dtype=torch.long)
+    edge_type = torch.tensor(edge_type, dtype=torch.long)
+
+    perm = (edge_index[0] * N + edge_index[1]).argsort()
+    edge_index = edge_index[:, perm]
+    edge_type = edge_type[perm]
+    
+    row, col = edge_index
+
+    # only keep largest connected component
+    edges_coo = edge_index.detach().cpu().numpy().T
+    g = nx.Graph()
+    g.add_nodes_from(np.arange(len(z)))
+    g.add_edges_from(edges_coo.tolist())
+
+    ccs = list(nx.connected_components(g))
+    largest_cc = ccs[np.argmax([len(cc) for cc in ccs])]
+    node_ids = np.asarray(list(largest_cc))
+
+    z = z[node_ids]
+    edges_cc = []
+    edge_labels = []
+    old2new = {old:new for new, old in enumerate(node_ids)}
+    for idx2, (u, v) in enumerate(edges_coo):
+        if u in node_ids and v in node_ids:
+            edges_cc += [[old2new[u], old2new[v]]]
+            edge_labels += [edge_type[idx2].item()]
+        
+    edge_index = np.asarray(edges_cc).T
+    
+    return dfs_code.min_dfs_code_from_edgeindex(edge_index, z.tolist(), edge_labels)
     
 
     
