@@ -43,23 +43,23 @@ def main(dataset_file, nr, total, max_nodes, max_edges, time_limit, log_level, u
         if idx >= start_idx + max_lines:
             break
         if idx % total == nr:
-            #try:
-            time1 = time.time()
-            logging.debug("processing %s"%smiles)
-            code, dfs_index = smiles2mindfscode(smiles, 
-                                                useHs=use_Hs, 
-                                                addLoops=add_loops, 
-                                                max_nodes=max_nodes, 
-                                                max_edges=max_edges) 
-            time2 = time.time()
-            exp.log_scalar('time %s'%smiles, time2-time1)
-            dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
+            try:
+                time1 = time.time()
+                logging.debug("processing %s"%smiles)
+                code, dfs_index = smiles2mindfscode(smiles, 
+                                                    useHs=use_Hs, 
+                                                    addLoops=add_loops, 
+                                                    max_nodes=max_nodes, 
+                                                    max_edges=max_edges) 
+                time2 = time.time()
+                exp.log_scalar('time %s'%smiles, time2-time1)
+                dfs_codes[smiles] = {'min_dfs_code':code, 'dfs_index':dfs_index}
                 
-            #except:
-            #    logging.warning('%s failed'%smiles)
-            #    logging.warning(sys.exc_info())
-            #    exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
-            #    continue
+            except:
+                logging.warning('%s failed'%smiles)
+                logging.warning(sys.exc_info())
+                exp.log_scalar('%s failed with'%smiles, sys.exc_info()[0])
+                continue
         
     with NamedTemporaryFile(suffix='.pkl', delete=True) as f:
         with open(f.name, 'wb') as ff:
