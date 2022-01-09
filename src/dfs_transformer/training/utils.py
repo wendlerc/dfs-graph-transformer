@@ -230,7 +230,7 @@ def collate_rnd2min(dlist, use_loops=False):
             prop_batch = {name: torch.tensor(deepcopy(plist)) for name, plist in prop_batch.items()}
             return rnd_code_batch, node_batch, edge_batch, targets, prop_batch
         return rnd_code_batch, node_batch, edge_batch, targets 
-    
+
     
 def collate_downstream(dlist, alpha=0, use_loops=False, use_min=False):
     dfs_codes = defaultdict(list)
@@ -341,3 +341,52 @@ def collate_downstream_qm9(dlist, alpha=0, use_loops=False, use_min=False):
     dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
                  for key, values in dfs_codes.items()}
     return smiles, dfs_codes, z,  y
+
+
+def dfs_codes_to_dicts(code_batch, nfeat_batch, efeat_batch):
+    dfs_codes = defaultdict(list)
+    for inp, nfeats, efeats in zip(code_batch, nfeat_batch, efeat_batch):
+        dfs_codes['dfs_from'] += [inp[:, 0]]
+        dfs_codes['dfs_to'] += [inp[:, 1]]
+        atm_from_feats = nfeats[inp[:, -3]]
+        atm_to_feats = nfeats[inp[:, -1]]
+        bnd_feats = efeats[inp[:, -2]]
+        dfs_codes['atm_from'] += [atm_from_feats]
+        dfs_codes['atm_to'] += [atm_to_feats]
+        dfs_codes['bnd'] += [bnd_feats]
+    dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
+                 for key, values in dfs_codes.items()}
+    return dfs_codes
+
+def collate_Barlow(dlist, use_loops=False):
+    
+    smiles = []
+    node_batch = [] 
+    edge_batch = []
+    y_batch = []
+    rnd_code_batch = []
+    min_code_batch = []
+    if use_loops:
+        loop = torch.tensor(bond_features(None)).unsqueeze(0)
+    for d in dlist:
+        edge_features = d.edge_features.clone()
+        min_code = d.min_dfs_code.clone()
+        min_index = d.min_dfs_index.clone()
+        code, index = dfs_code.rnd_dfs_code_from_torch_geometric(d, d.z.numpy().tolist(), 
+                                                                 np.argmax(d.edge_attr.numpy(), axis=1).tolist())
+        
+        rnd_code = torch.tensor(np.asarray(code), dtype=torch.long)
+        rnd_index = torch.tensor(np.asarray(index), dtype=torch.long)
+        
+        if use_loops:
+            raise NotImplementedError("this functionality is not implemented yet")
+        
+        rnd_code_batch += [rnd_code]
+        min_code_batch += [min_code]
+        node_batch += [d.node_features.clone()]
+        edge_batch += [edge_features]
+    
+    min_dfs_codes = dfs_codes_to_dicts(min_code_batch, node_batch, edge_batch)
+    rnd_dfs_codes = dfs_codes_to_dicts(rnd_code_batch, node_batch, edge_batch)
+
+    return min_dfs_codes, rnd_dfs_codes
