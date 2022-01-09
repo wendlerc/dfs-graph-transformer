@@ -74,7 +74,7 @@ if __name__ == "__main__":
     run = wandb.init(mode=args.wandb_mode, 
                      project=args.wandb_project, 
                      entity=args.wandb_entity, 
-                     name=args.name, config=config.to_dict())
+                     name=args.name, config=config.to_dict(), settings=wandb.Settings(start_method='fork'))
     
     m = deepcopy(config.model)
     t = deepcopy(config.training)
