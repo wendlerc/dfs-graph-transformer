@@ -15,6 +15,10 @@ import os
 from collections import defaultdict
 import functools
 
+class WandbDummy():
+    def log(*args, **kwargs):
+        return
+
 class Trainer():
     #TODO: refactor such that this method takes an optimizer object instead of all these params...
     def __init__(self, model, loader, loss, validloader=None, metrics={}, 
@@ -25,7 +29,8 @@ class Trainer():
                  es_argument = None,
                  gpu_id=0, es_improvement=0.0, 
                  es_patience=100, es_path=None, es_period=1000, wandb_run = None, 
-                 adam_betas=(0.9,0.98), adam_eps=1e-9, param_groups=None, **kwargs):
+                 adam_betas=(0.9,0.98), adam_eps=1e-9, param_groups=None,
+                 clip_gradient_norm=0.5, **kwargs):
         """
         data = next(iter(loader)),
         loss and metrics will be computed on model(data[:-1]), data[-1] 
@@ -45,6 +50,7 @@ class Trainer():
         self.lr_argument = lr_argument
         self.decay_factor = decay_factor
         self.minimal_lr = minimal_lr
+        self.clip_gradient_norm = clip_gradient_norm
         self.gpu_id = gpu_id
         if self.gpu_id is not None:
             self.device = torch.device('cuda:%d'%self.gpu_id if torch.cuda.is_available() else 'cpu')
@@ -58,7 +64,10 @@ class Trainer():
         else:
             self.es_path = es_path
         self.es_argument = es_argument
-        self.wandb = wandb_run 
+        if wandb_run is None:
+            self.wandb = WandbDummy()
+        else:
+            self.wandb = wandb_run 
         
         if param_groups is not None:
             self.optim = self.optimizer(param_groups)
@@ -99,7 +108,8 @@ class Trainer():
                     loss = self.loss(pred, output)
                     loss.backward()
                     if (step+1) % self.accumulate_grads == 0:
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                        if self.clip_gradient_norm is not None:
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip_gradient_norm)
                         optim.step() 
                     epoch_loss = (epoch_loss*i + loss.item())/(i+1)
                     log['batch-loss'] = loss
@@ -111,7 +121,7 @@ class Trainer():
                         epoch_metric[name] = (epoch_metric[name]*i + res.item())/(i+1)
                         log['batch-'+name] = res
                         log[name] = epoch_metric[name]
-                        pbar_string += " %2.4f"%res
+                        pbar_string += " %2.4f"%epoch_metric[name]
                     
                     curr_lr = list(optim.param_groups)[0]['lr']
                     log['learning rate'] = curr_lr

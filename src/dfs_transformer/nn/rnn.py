@@ -26,7 +26,9 @@ class DFSCodeEncoderLSTM(nn.Module):
         self.register_buffer('dfs_emb', dfs_emb)
         self.emb_atom = atom_embedding
         self.emb_bond = bond_embedding
-            
+        self.emb_seq = PositionalEncoding(self.ninp, max_len=max_edges, dropout=dropout)
+        self.mixer = nn.Linear(self.ninp, self.ninp)
+        
         self.hidden_size = self.ninp // 2 if bidirectional else self.ninp
         self.enc = nn.LSTM(input_size=self.ninp, hidden_size=self.hidden_size, 
                            num_layers=nlayers, dropout=dropout, 
@@ -35,46 +37,44 @@ class DFSCodeEncoderLSTM(nn.Module):
         if missing_value is not None:
             self.missing_token = nn.Parameter(torch.empty(1, self.ninp), requires_grad=True)
             nn.init.normal_(self.missing_token, mean=.0, std=.5)
+        self.rescale_factor = math.sqrt(self.ninp) if rescale_flag else 1.
             
-        
-    def prepare_tokens_BERT(self, C, N, E):
-        src = []
-        for code, n_feats, e_feats in zip(C, N, E):
-            mask = code[:, 0] != self.missing_value
-            atom_emb, bond_emb = self.emb_atom(n_feats), self.emb_bond(e_feats)
-            # embed all the non-missing values
-            code_input = torch.cat((self.dfs_emb[code[mask][:, 0]], 
-                                    self.dfs_emb[code[mask][:, 1]], 
-                                    atom_emb[code[mask][:, -3]], 
-                                    bond_emb[code[mask][:, -2]], 
-                                    atom_emb[code[mask][:,-1]]), dim=1)
-            # create missing tokens
-            code_missing = self.missing_token.expand(torch.sum(~mask),-1)
-            code_emb = torch.ones((code.shape[0], self.ninp), device=code_input.device)
+    
+    def forward(self, dfs_codes, class_token=None):
+        if self.missing_value is not None:
+            src_key_padding_mask = (dfs_codes['dfs_from'] == -1000).T
+            n_seq = dfs_codes['dfs_from'].shape[0]
+            n_batch = dfs_codes['dfs_from'].shape[1]
+            mask = dfs_codes['dfs_from'] >= 0
+            missing = dfs_codes['dfs_from'] == -1
+            atm_from = dfs_codes['atm_from'][mask]
+            atm1 = self.emb_atom(atm_from)
+            atm_to = dfs_codes['atm_to'][mask]
+            atm2 = self.emb_atom(atm_to)
+            bnd_inp = dfs_codes['bnd'][mask]
+            bnd = self.emb_bond(bnd_inp)
+            code_input = torch.cat((self.dfs_emb[dfs_codes['dfs_from'][mask]],
+                                    self.dfs_emb[dfs_codes['dfs_to'][mask]],
+                                    atm1, atm2, bnd), dim=1)
+            
+            code_emb = torch.ones((n_seq, 
+                                   n_batch, 
+                                   self.ninp), device=dfs_codes['dfs_from'].device)
             code_emb[mask] *= code_input
-            code_emb[~mask] *= code_missing
-            src.append(code_emb)
-        batch = nn.utils.rnn.pad_sequence(src, padding_value=0)
-        return batch
-
-    def prepare_tokens(self, C, N, E):
-        src = []
-        for code, n_feats, e_feats in zip(C, N, E):
-            atom_emb, bond_emb = self.emb_atom(n_feats), self.emb_bond(e_feats)
-            code_emb = torch.cat((self.dfs_emb[code[:, 0]], self.dfs_emb[code[:, 1]], 
-                                  atom_emb[code[:, -3]], bond_emb[code[:, -2]], atom_emb[code[:,-1]]), dim=1)
-            src.append(code_emb)
-        batch = nn.utils.rnn.pad_sequence(src, padding_value=0)
-        return batch
-
-    def forward(self, C, N, E, class_token=None):
-        if self.missing_value is None:
-            batch = self.prepare_tokens(C, N, E)
+            code_emb[missing] *= self.missing_token
+            code_emb[~src_key_padding_mask.T] = self.mixer(code_emb[~src_key_padding_mask.T])
+            code_emb[src_key_padding_mask.T] = 0 # for transformer we don't need this cuz it takes the mask
+            batch = self.emb_seq(code_emb * self.rescale_factor)
         else:
-            batch = self.prepare_tokens_BERT(C, N, E)
+            raise NotImplemented('not implemented yet')
+            
+            
         # batch is of shape (sequence length, batch, d_model)
         if class_token is None:
-            output, _ = self.enc(batch)
+            self_attn, _ = self.enc(batch)
         else:
-            output, _ = self.enc(torch.cat((class_token.expand(-1, batch.shape[1], -1), batch), dim=0))
-        return output, None
+            src_key_padding_mask = torch.cat((torch.zeros((batch.shape[1], class_token.shape[0]), dtype=torch.bool, device=batch.device), 
+                                              src_key_padding_mask), dim=1) # n_batch x n_seq
+            self_attn, _ = self.enc(torch.cat((class_token.expand(-1, batch.shape[1], -1), batch), dim=0))
+        return self_attn, src_key_padding_mask
+    
