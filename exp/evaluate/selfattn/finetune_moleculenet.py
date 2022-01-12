@@ -25,10 +25,24 @@ import dfs_code
 from chemprop.features.featurization import bond_features
 import pickle
 import glob
+from collections import OrderedDict
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-def load_selfattn(t, device):
+def load_DFSCodeSeq2SeqFC(model_dir, device, strict=False):
+    with open(model_dir+"/config.yaml") as file:
+        cfg = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
+    model = DFSCodeSeq2SeqFC(**cfg.model)
+    weights = torch.load(model_dir+"/checkpoint.pt", map_location=device)
+    params = OrderedDict()
+    for target_key in model.state_dict().keys():
+        for key, value in weights.items():
+            if target_key in key:
+                params[target_key] = value
+    model.load_state_dict(params, strict=strict)
+    return model, cfg.model
+
+def load_selfattn_wandb(t, device):
     # download pretrained model
     run = wandb.init(mode=args.wandb_mode, 
                      project=t.pretrained_project, 
@@ -38,43 +52,12 @@ def load_selfattn(t, device):
     model_at = run.use_artifact(t.pretrained_model + ":latest")
     model_dir = model_at.download(root=t.wandb_dir+'/artifacts/%s/'%t.pretrained_model)
     run.finish()
+    return load_DSFCodeSeq2SeqFC(model_dir, device, strict=t.strict)
+    
 
-    model_yaml = model_dir+"/config.yaml"
-    if not os.path.isfile(model_yaml) or t.use_local_yaml:
-        model_yaml = t.pretrained_yaml
-    
-    with open(model_yaml) as file:
-        cfg = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
-    
-    m = cfg.model
-    
-    encoder = DFSCodeSeq2SeqFC(**m)
-    head_specs = {}
-    
-    with open(t.data.path+"/properties_aggr.pkl", "rb") as f:
-        prop_aggr = pickle.load(f)
-    if config.data.molecular_properties is None:
-        cfg.molecular_properties = list(prop_aggr.keys())
-    
-    for name in cfg.data.molecular_properties:
-        aggr = prop_aggr[name]
-        if aggr['is_int']:
-            head_specs[name] = aggr['max'] - aggr['min'] + 2 # +1 because we have class 0, ..., k, +1 for outliers 
-        else:
-            head_specs[name] = 1
-    
-    model = TransformerPlusHeads(encoder, head_specs)
-    
-    if model_dir is not None:
-        model.load_state_dict(torch.load(model_dir+'/checkpoint.pt', map_location=device), strict=t.strict)
-    model = model.encoder
-    
-    if cfg.training.mode in ["rnd2min", "rnd2rnd"]:
-        m['use_min'] = False
-    else:
-        m['use_min'] = True
-        
-    return model, m
+def load_selfattn_local(model_dir, device):
+    return load_DFSCodeSeq2SeqFC(model_dir, device)
+
 
 def loss(pred, y, ce):
     return ce(pred, y[0])
@@ -140,6 +123,7 @@ if __name__ == "__main__":
     parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem1M.yaml")
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--model', type=str, default=None)
+    parser.add_argument('--local_modeldir', type=str, default=None)
     parser.add_argument('--n_hidden', type=int, default=0)
     parser.add_argument('--n_seeds', type=int, default=1)
     parser.add_argument('--data_dir', type=str, default=None)
@@ -182,9 +166,16 @@ if __name__ == "__main__":
         np.random.seed(t.seed)
     
     device = torch.device('cuda:%d'%t.gpu_id if torch.cuda.is_available()  else 'cpu')
-    
-    encoder, m = load_selfattn(t, device)
-    print('loaded pretrained model')
+    if args.local_modeldir is not None:
+        encoder, m = load_selfattn_local(args.local_modeldir, device)
+        print('loaded local model')
+    elif config.pretrained_model is not None:
+        encoder, m = load_selfattn_wandb(t, device)
+        print('loaded wandb model')
+    else:
+        ...
+        
+        
     if "use_min" not in args.overwrite.keys():
         config["use_min"] = m.use_min
     
@@ -208,6 +199,7 @@ if __name__ == "__main__":
                  reinit=True,
                  dir=args.wandb_dir)
         wandb.config.update({'dataset': dataset}, allow_val_change=True)
+        wandb.config.update({'model': m})
         
         roc_avgs = []
         prc_avgs = []

@@ -18,11 +18,11 @@ gpu_id: 0
 es_period: null
 es_patience: 10
 es_improvement: 0.0
-pretrained_class: 'DFSCodeSeq2SeqFC'
+pretrained_class: 'DFSCodeSeq2SeqFC' # this is ancient and should be instead put into the config.model
 pretrained_project: 'pubchem_newdataloader'
 pretrained_entity: 'dfstransformer'
-pretrained_model: 'm2m-noprop'
-pretrained_yaml: './config/selfattn/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
+pretrained_model: null
+pretrained_yaml: './config/selfattn/model/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
 use_local_yaml: False
 pretrained_dir: null
 es_path: null
@@ -32,3 +32,4 @@ strict: True
 dataset: 'bbbp'
 seed: 123
 num_workers: 8
+use_min: False
