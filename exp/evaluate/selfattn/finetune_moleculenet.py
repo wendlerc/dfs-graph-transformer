@@ -48,7 +48,8 @@ def load_selfattn_wandb(t, device):
                      project=t.pretrained_project, 
                      entity=t.pretrained_entity, 
                      job_type="inference",
-                     dir=t.wandb_dir)
+                     dir=t.wandb_dir,
+                     settings=wandb.Settings(start_method='fork'))
     model_at = run.use_artifact(t.pretrained_model + ":latest")
     model_dir = model_at.download(root=t.wandb_dir+'/artifacts/%s/'%t.pretrained_model)
     run.finish()
@@ -208,7 +209,8 @@ if __name__ == "__main__":
                  entity=args.wandb_entity, 
                  name=args.name, config=config.to_dict(),
                  reinit=True,
-                 dir=args.wandb_dir)
+                 dir=args.wandb_dir,
+                 settings=wandb.Settings(start_method='fork'))
         wandb.config.update({'dataset': dataset}, allow_val_change=True)
         wandb.config.update({'model': m})
         
