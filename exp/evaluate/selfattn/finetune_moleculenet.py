@@ -40,7 +40,7 @@ def load_DFSCodeSeq2SeqFC(model_dir, device, strict=False):
             if target_key in key:
                 params[target_key] = value
     model.load_state_dict(params, strict=strict)
-    return model, cfg.model
+    return model, cfg
 
 def load_selfattn_wandb(t, device):
     # download pretrained model
@@ -52,7 +52,7 @@ def load_selfattn_wandb(t, device):
     model_at = run.use_artifact(t.pretrained_model + ":latest")
     model_dir = model_at.download(root=t.wandb_dir+'/artifacts/%s/'%t.pretrained_model)
     run.finish()
-    return load_DSFCodeSeq2SeqFC(model_dir, device, strict=t.strict)
+    return load_DFSCodeSeq2SeqFC(model_dir, device, strict=t.strict)
     
 
 def load_selfattn_local(model_dir, device):
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     with open(args.yaml_data) as file:
         d = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
-    for key,value in args.overwrite.items():
+    for key, value in args.overwrite.items():
         if type(value) is dict:
             for key1,value1 in value.items():
                 config[key][key1] = value1
@@ -167,17 +167,28 @@ if __name__ == "__main__":
     
     device = torch.device('cuda:%d'%t.gpu_id if torch.cuda.is_available()  else 'cpu')
     if args.local_modeldir is not None:
-        encoder, m = load_selfattn_local(args.local_modeldir, device)
+        encoder, pretrained_cfg = load_selfattn_local(args.local_modeldir, device)
+        m = pretrained_cfg.model
+        config.pretrained_model = args.local_modeldir
         print('loaded local model')
     elif config.pretrained_model is not None:
-        encoder, m = load_selfattn_wandb(t, device)
+        encoder, pretrained_cfg = load_selfattn_wandb(t, device)
+        m = pretrained_cfg.model
         print('loaded wandb model')
     else:
-        ...
+        pretrained_cfg = None
+        with open(config.pretrained_yaml) as file:
+            m = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
+        encoder = DFSCodeSeq2SeqFC(**m)
+        config.pretrained_model = config.pretrained_yaml
+        print('initialized model')
         
         
-    if "use_min" not in args.overwrite.keys():
-        config["use_min"] = m.use_min
+    if "use_min" not in args.overwrite.keys() and pretrained_cfg is not None:
+        if pretrained_cfg.model in ["min2min"]:
+            config["use_min"] = True
+        else:
+            config["use_min"] = False
     
     if "use_loops" not in m:
         m.use_loops = False
