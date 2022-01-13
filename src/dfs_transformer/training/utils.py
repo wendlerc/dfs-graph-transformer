@@ -108,7 +108,7 @@ def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
     return inputs, targets, masks
 
 
-def collate_BERT(dlist, mode="min2min", fraction_missing=0.1, use_loops=False):
+def collate_BERT(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False):
         node_batch = [] 
         edge_batch = []
         code_batch = []

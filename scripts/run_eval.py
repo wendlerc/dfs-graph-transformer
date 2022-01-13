@@ -4,6 +4,12 @@
 Created on Wed Nov 24 15:27:33 2021
 
 @author: chrisw
+
+
+usage example: 
+    
+    python scripts/run_eval.py "bsub -G ls_krausea -o /cluster/scratch/wendlerc/lsf_gtrans -n 1 -W 4:00 -R 'rusage[mem=30000, ngpus_excl_p=1]' -R 'select[gpu_mtotal0>=10000]' python exp/evaluate/selfattn/finetune_moleculenet.py --wandb_project moleculenet10-finetune-cluster --model"
+
 """
 
 import wandb 

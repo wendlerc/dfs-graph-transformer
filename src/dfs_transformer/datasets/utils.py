@@ -5,7 +5,7 @@ Created on Mon Aug 23 15:27:25 2021
 
 @author: chrisw
 """
-from torch_geometric.data import Data
+from ml_collections import ConfigDict as Data
 import torch
 from torch.utils.data import Dataset
 import torch.nn.functional as F
@@ -327,8 +327,8 @@ def smiles2graph(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edge
     edge_attr = torch.tensor(edge_feats, dtype=torch.float)
     bond_chemprop = torch.tensor(bond_chemprop_new, dtype=torch.float)
     
-    d = Data(x=x, z=z, pos=None, edge_index=edge_index.T,
-                    edge_attr=edge_attr, atom_features=atom_chemprop, bond_features=bond_chemprop)
+    d = Data({"x":x, "z":z, "pos":None, "edge_index":edge_index.T,
+                    "edge_attr":edge_attr, "atom_features":atom_chemprop, "bond_features":bond_chemprop})
     return d
 
 def smiles2z(smiles, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np.inf):
