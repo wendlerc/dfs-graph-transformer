@@ -314,6 +314,20 @@ class DFSCodeSeq2SeqFC(nn.Module):
             raise ValueError("unsupported method")
     
     def fwd_code(self, dfs_codes):
+        """
+        only fills in the masked inputs
+
+        Parameters
+        ----------
+        dfs_codes : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        dfs_code_list : TYPE
+            DESCRIPTION.
+
+        """
         dfs1 = dfs_codes['dfs_from']
         dfs2 = dfs_codes['dfs_to']
         atm1 = torch.argmax(dfs_codes['atm_from'], dim=2)+1
@@ -324,9 +338,34 @@ class DFSCodeSeq2SeqFC(nn.Module):
         dfs1_logits, dfs2_logits, atm1_logits, atm2_logits, bnd_logits = self.forward(dfs_codes)
         dfs1[missing] = torch.argmax(dfs1_logits, dim=2)[missing]
         dfs2[missing] = torch.argmax(dfs2_logits, dim=2)[missing]
-        atm1[missing] = torch.argmax(atm1_logits, dim=2)[missing]+1
-        atm2[missing] = torch.argmax(atm2_logits, dim=2)[missing]+1
+        atm1[missing] = torch.argmax(atm1_logits, dim=2)[missing]# here we don't need +1 cuz it is trained without the +1...
+        atm2[missing] = torch.argmax(atm2_logits, dim=2)[missing]
         bnd[missing] = torch.argmax(bnd_logits, dim=2)[missing]
+        dfs1[mask] = -1000
+        dfs2[mask] = -1000
+        atm1[mask] = -1000
+        atm2[mask] = -1000
+        bnd[mask] = -1000
+        dfs_code_list = []
+        for d1, d2, a1, a2, b in zip(dfs1.T, dfs2.T, atm1.T, atm2.T, bnd.T):
+            mask = d1 != -1000
+            code = torch.cat((d1[mask].unsqueeze(1), 
+                               d2[mask].unsqueeze(1), 
+                               a1[mask].unsqueeze(1), 
+                               b[mask].unsqueeze(1), 
+                               a2[mask].unsqueeze(1)), dim=1)
+            dfs_code_list += [code.detach().cpu().numpy().tolist()]
+        return dfs_code_list
+    
+    
+    def fwd_code_all(self, dfs_codes):
+        mask = dfs_codes['dfs_from'] == -1000
+        dfs1_logits, dfs2_logits, atm1_logits, atm2_logits, bnd_logits = self.forward(dfs_codes)
+        dfs1 = torch.argmax(dfs1_logits, dim=2)
+        dfs2 = torch.argmax(dfs2_logits, dim=2)
+        atm1 = torch.argmax(atm1_logits, dim=2)
+        atm2 = torch.argmax(atm2_logits, dim=2)
+        bnd = torch.argmax(bnd_logits, dim=2)
         dfs1[mask] = -1000
         dfs2[mask] = -1000
         atm1[mask] = -1000
