@@ -328,8 +328,8 @@ class DFSCodeSeq2SeqFC(nn.Module):
             DESCRIPTION.
 
         """
-        dfs1 = dfs_codes['dfs_from']
-        dfs2 = dfs_codes['dfs_to']
+        dfs1 = dfs_codes['dfs_from'].clone()
+        dfs2 = dfs_codes['dfs_to'].clone()
         atm1 = torch.argmax(dfs_codes['atm_from'], dim=2)+1
         atm2 = torch.argmax(dfs_codes['atm_to'], dim=2)+1
         bnd = torch.argmax(dfs_codes['bnd'], dim=2)
