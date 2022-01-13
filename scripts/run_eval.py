@@ -14,7 +14,7 @@ import shlex
 print("starting evaluation script...")
 parser = argparse.ArgumentParser()
 parser.add_argument('bashcommand', type=str, help="bash \"bashcommand <pretrainedmodel>; will be run")
-parser.add_argument('--pretrained_project', type=str, default="pubchem_newloader")
+parser.add_argument('--pretrained_project', type=str, default="dfstransformer/pubchem_newdataloader")
 args = parser.parse_args()
 
 print("logging into wandb...")
@@ -27,13 +27,13 @@ print("running experiments...")
 api = wandb.Api()
 for run in api.runs(args.pretrained_project):
     try:
-        artifact = api.artifact(args.pretrained_project+"%s:latest"%run.name)
+        artifact = api.artifact(args.pretrained_project+"/%s:latest"%run.name)
         bashCommand = args.bashcommand+' %s'
         bashCommand = bashCommand%(run.name)
         print('running: %s'%bashCommand)
-        print(shlex.split(bashCommand))
         process = subprocess.Popen(shlex.split(bashCommand), stdout=subprocess.PIPE)
         output, error = process.communicate()
         print(output, error)
-    except:
+    except Exception as e:
+        print("Exception: {0}".format(e))
         continue
