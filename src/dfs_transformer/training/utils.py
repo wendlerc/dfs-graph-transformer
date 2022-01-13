@@ -359,7 +359,6 @@ def dfs_codes_to_dicts(code_batch, nfeat_batch, efeat_batch):
     return dfs_codes
 
 def collate_Barlow(dlist, use_loops=False):
-    
     smiles = []
     node_batch = [] 
     edge_batch = []
@@ -388,5 +387,111 @@ def collate_Barlow(dlist, use_loops=False):
     
     min_dfs_codes = dfs_codes_to_dicts(min_code_batch, node_batch, edge_batch)
     rnd_dfs_codes = dfs_codes_to_dicts(rnd_code_batch, node_batch, edge_batch)
-
     return min_dfs_codes, rnd_dfs_codes
+
+
+def BERTize_entries(code, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
+    """
+    @param code: a dfs code with entries (dfs1, dfs2, atm1, bnd, atm2, idx1, eidx, idx2)
+    
+    Training the language model in BERT is done by predicting 15% of the tokens in the input, that were randomly picked. 
+    These tokens are pre-processed as follows — 80% are replaced with a “[MASK]” token, 10% with a random word, and 10% 
+    use the original word. 
+    
+    to get a random word we use the following strategy: we copy an random entry to that position 
+    TODO: in the future one could also in addition implement a flip of the edge direction with a 50% chance
+    
+    returns preprocessed input sequences, target sequences and a mask indicating which inputs are part of the 15% masked, orig, rnd
+    """
+    fraction_orig = 1. - fraction_mask - fraction_rand
+    fo = fraction_orig
+    fm = fraction_mask
+    fr = fraction_rand
+    n = len(code)
+    mask = np.random.binomial(1, fraction_missing, code.shape).astype(bool)
+    mask_delete = np.random.binomial(1, fraction_mask, code.shape).astype(bool)*mask
+    mask_random_inp = np.random.binomial(1, fraction_rand/(1-fm), code.shape).astype(bool)*(True^mask_delete)*mask
+    mask_random_out = mask_random_inp.copy()
+    mask_random_out[:, 0] = mask_random_out[np.random.permutation(n), 0]
+    mask_random_out[:, 1] = mask_random_out[np.random.permutation(n), 1]
+    mask_random_out[:, 2] = mask_random_out[np.random.permutation(n), 2]
+    mask_random_out[:, 3] = mask_random_out[np.random.permutation(n), 3]
+    mask_random_out[:, 4] = mask_random_out[np.random.permutation(n), 4]
+    mask = torch.tensor(mask)
+    mask_delete = torch.tensor(mask_delete)
+    mask_random_inp = torch.tensor(mask_random_inp)
+    mask_random_out = torch.tensor(mask_random_out)
+    inp = code.clone()
+    target = code.clone()
+    inp[mask_random_inp] = target[mask_random_out] 
+    target[~mask] = -1
+    inp[mask_delete] = -1
+    inp[:,-3:] = code[:, -3:].clone()
+    target[:, -3:] = code[:, -3:].clone()
+    mask[:, -3:] = False
+    return inp, target, mask
+
+def collate_BERT_entries(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False):
+        if use_loops:
+            raise NotImplementedError("did not implement this yet")
+        
+        outputs = []
+        dfs_codes = defaultdict(list)
+        if "properties" in dlist[0].keys():
+            prop_batch = defaultdict(list)
+        if use_loops:
+            loop = torch.tensor(bond_features(None)).unsqueeze(0)
+        for d in dlist:
+            
+            edge_features = d.edge_features
+            
+            if mode == "min2min":
+                code = d.min_dfs_code
+                index = d.min_dfs_index
+            elif mode == "rnd2rnd":
+                rnd_code, rnd_index = dfs_code.rnd_dfs_code_from_torch_geometric(d, 
+                                                                         d.z.numpy().tolist(), 
+                                                                         np.argmax(d.edge_attr.numpy(), axis=1))                
+                code = torch.tensor(rnd_code)
+                index = torch.tensor(rnd_index)
+            else:
+                raise ValueError("unknown config.training.mode %s"%mode)
+                
+
+            if "properties" in dlist[0].keys():
+                for name, prop in d.properties.items():
+                    prop_batch[name.replace('_', '.')] += [prop]
+            
+            inp, out, bertmask = BERTize_entries(code, fraction_missing=fraction_missing)
+            outputs += [out]
+            nfeats = d.node_features
+            efeats = edge_features
+            mask = ~bertmask # the mask returned by BERT indicates which inputs will be masked away
+            dfs_codes['dfs_from'] += [inp[:, 0]]
+            dfs_codes['dfs_to'] += [inp[:, 1]]
+            
+            atm_from_feats = torch.ones((inp.shape[0], nfeats.shape[1]))
+            atm_from_feats[mask[:, 2]] *= nfeats[inp[mask[:, 2]][:, -3]]
+            atm_from_feats[~mask[:, 2]] *= -1
+            
+            atm_to_feats = torch.ones((inp.shape[0], nfeats.shape[1]))
+            atm_to_feats[mask[:, 4]] *= nfeats[inp[mask[:, 4]][:, -1]]
+            atm_to_feats[~mask[:, 4]] *= -1
+            
+            bnd_feats = torch.ones((inp.shape[0], efeats.shape[1]))
+            bnd_feats[mask[:, 3]] *= efeats[inp[mask[:, 3]][:, -2]]
+            bnd_feats[~mask[:, 3]] *= -1
+            
+            
+            dfs_codes['atm_from'] += [atm_from_feats]
+            dfs_codes['atm_to'] += [atm_to_feats]
+            dfs_codes['bnd'] += [bnd_feats]
+            
+        dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
+                     for key, values in dfs_codes.items()}
+        
+        targets = nn.utils.rnn.pad_sequence(outputs, padding_value=-1).clone()
+        if "properties" in dlist[0].keys():
+            prop_batch = {name: torch.tensor(plist).clone() for name, plist in prop_batch.items()}
+            return dfs_codes, targets, prop_batch
+        return dfs_codes, targets

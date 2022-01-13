@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 import sys
 sys.path = ['./src'] + sys.path
 from dfs_transformer import DFSCodeSeq2SeqFC, TrainerNew, PubChem, get_n_files, TransformerPlusHeads
-from dfs_transformer.training.utils import seq_loss, seq_acc, collate_BERT, collate_rnd2min
+from dfs_transformer.training.utils import seq_loss, seq_acc, collate_BERT, collate_rnd2min, collate_BERT_entries
 import argparse
 import yaml
 import functools
@@ -147,6 +147,11 @@ if __name__ == "__main__":
                                        use_loops=m.use_loops)
     elif config.training.mode == "rnd2min":
         collate_fn = functools.partial(collate_rnd2min,
+                                       use_loops=m.use_loops)
+    elif config.training.mode == "rnd2rnd_entry":
+        collate_fn = functools.partial(collate_BERT_entries, 
+                                       mode="rnd2rnd", 
+                                       fraction_missing = config.training.fraction_missing,
                                        use_loops=m.use_loops)
     else:
         raise ValueError("unknown config.training.mode %s"%config.training.mode)        

@@ -63,6 +63,7 @@ def isValid(mol, verbose=False):
 def Mol2Smiles(mol):
     return Chem.MolToSmiles(mol)
 
+
 def DFSCode2Smiles(dfs_code):
     return Chem.MolToSmiles(Graph2Mol(*DFSCode2Graph(dfs_code)))
 
@@ -135,6 +136,37 @@ def Smiles2DFSCode(smiles, useMin=False, useHs=False, addLoops=False, max_nodes=
         return dfs_code.min_dfs_code_from_edgeindex(edge_index, z.tolist(), edge_labels)
     else:
         return dfs_code.rnd_dfs_code_from_edgeindex(edge_index, z.tolist(), edge_labels)
+    
+
+def computeChemicalValidity(dfs_codes):
+    valid_list = []
+    for code in dfs_codes:
+        try:
+            valid_list += [isValidMoleculeDFSCode(code)]
+        except:
+            valid_list += [False]
+    valid = np.asarray(valid_list)
+    return valid.sum()/len(valid)
+
+
+def computeChemicalValidityAndNovelty(smiles, dfs_codes):
+    valid_list = []
+    same_list = []
+    for code, sml in zip(dfs_codes, smiles):
+        try:
+            valid_list += [isValidMoleculeDFSCode(code)]
+        except:
+            valid_list += [False]
+        try:
+            if valid_list[-1]:
+                smiles_orig = Mol2Smiles(Chem.MolFromSmiles(sml))
+                smiles_rec = DFSCode2Smiles(code)
+                same_list += [smiles_orig == smiles_rec]
+        except:
+            continue
+    valid = np.asarray(valid_list)
+    same = np.asarray(same_list)
+    return valid.sum()/len(valid), same.sum()/len(same)
     
 
     
