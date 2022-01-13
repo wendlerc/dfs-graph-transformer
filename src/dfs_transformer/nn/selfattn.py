@@ -313,7 +313,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
         else:
             raise ValueError("unsupported method")
     
-    def fwd_code(self, dfs_codes):
+    def fwd_code(self, dfs_codes, features=False):
         """
         only fills in the masked inputs
 
@@ -330,9 +330,17 @@ class DFSCodeSeq2SeqFC(nn.Module):
         """
         dfs1 = dfs_codes['dfs_from'].clone()
         dfs2 = dfs_codes['dfs_to'].clone()
-        atm1 = torch.argmax(dfs_codes['atm_from'], dim=2)+1
-        atm2 = torch.argmax(dfs_codes['atm_to'], dim=2)+1
-        bnd = torch.argmax(dfs_codes['bnd'], dim=2)
+        if features:
+            atm1 = torch.argmax(dfs_codes['atm_from'][:, :, :100], dim=2)+1
+            atm2 = torch.argmax(dfs_codes['atm_to'][:, :, :100], dim=2)+1
+            bnd = torch.argmax(dfs_codes['bnd'][:, :, 1:5], dim=2) #single doble triple aromatic is used in chemprop
+            tmp = bnd.clone()
+            bnd[tmp==2] = 3
+            bnd[tmp==3] = 2
+        else:
+            atm1 = torch.argmax(dfs_codes['atm_from'], dim=2)+1
+            atm2 = torch.argmax(dfs_codes['atm_to'], dim=2)+1
+            bnd = torch.argmax(dfs_codes['bnd'], dim=2)
         missing = dfs1 == -1
         mask = dfs1 == -1000
         dfs1_logits, dfs2_logits, atm1_logits, atm2_logits, bnd_logits = self.forward(dfs_codes)
@@ -359,6 +367,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
     
     
     def fwd_code_all(self, dfs_codes):
+        """ this does not really work"""
         mask = dfs_codes['dfs_from'] == -1000
         dfs1_logits, dfs2_logits, atm1_logits, atm2_logits, bnd_logits = self.forward(dfs_codes)
         dfs1 = torch.argmax(dfs1_logits, dim=2)

@@ -50,14 +50,18 @@ def Graph2Mol(edge_list, node_labels, edge_labels):
     return mol
 
 
-def isValid(mol):
+def isValid(mol, verbose=False):
     try:
         Chem.SanitizeMol(mol)
         return True
     except Exception as e:
-        print(e)
+        if verbose:
+            print(e)
         return False
     
+
+def Mol2Smiles(mol):
+    return Chem.MolToSmiles(mol)
 
 def DFSCode2Smiles(dfs_code):
     return Chem.MolToSmiles(Graph2Mol(*DFSCode2Graph(dfs_code)))
