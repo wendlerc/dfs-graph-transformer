@@ -282,7 +282,7 @@ class DFSCodeSeq2SeqFC(nn.Module):
                  nlayers=6, n_class_tokens=1, dim_feedforward=2048, 
                  max_nodes=250, max_edges=500, dropout=0.1, 
                  missing_value=None, return_features=False, 
-                 encoder_class="DFSCodeEncoder", **kwargs):
+                 encoder_class="DFSCodeEncoder", cls_for_seq=True, **kwargs):
         super().__init__()
         self.nlayers = nlayers
         self.n_class_tokens = n_class_tokens
@@ -311,13 +311,21 @@ class DFSCodeSeq2SeqFC(nn.Module):
                                           max_nodes=max_nodes, max_edges=max_edges, 
                                           dropout=dropout, missing_value=missing_value)
         self.ninp = self.encoder.ninp
-        self.fc_dfs_idx1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
-        self.fc_dfs_idx2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
-        self.fc_atom1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
-        self.fc_atom2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
-        self.fc_bond = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_bonds)
+        self.cls_for_seq = cls_for_seq
         self.return_features = return_features
         
+        if not cls_for_seq:
+            self.fc_dfs_idx1 = nn.Linear(self.ninp, max_nodes)
+            self.fc_dfs_idx2 = nn.Linear(self.ninp, max_nodes)
+            self.fc_atom1 = nn.Linear(self.ninp, n_atoms)
+            self.fc_atom2 = nn.Linear(self.ninp, n_atoms)
+            self.fc_bond = nn.Linear(self.ninp, n_bonds)
+        else:
+            self.fc_dfs_idx1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
+            self.fc_dfs_idx2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
+            self.fc_atom1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
+            self.fc_atom2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
+            self.fc_bond = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_bonds)
         
         self.cls_token = nn.Parameter(torch.empty(n_class_tokens, 1, self.ninp), requires_grad=True)
         nn.init.normal_(self.cls_token, mean=.0, std=.5)
@@ -326,10 +334,14 @@ class DFSCodeSeq2SeqFC(nn.Module):
         self_attn, _ = self.encoder(dfs_codes, class_token=self.cls_token) # seq x batch x feat
         
         batch_feats = self_attn[self.n_class_tokens:] 
-        batch_global = self_attn[:self.n_class_tokens]
-        batch_global = batch_global.view(1, -1, self.n_class_tokens * self.ninp)
-        batch_global = batch_global.expand(batch_feats.shape[0], -1, -1) # batch x seq x ncls * feats
-        batch = torch.cat((batch_feats, batch_global), dim=2) # each of the prediction heads gets cls token as additional input
+        if self.cls_for_seq:
+            #TODO: check if this batch global thingy is correct and does the same thing einsum would do
+            batch_global = self_attn[:self.n_class_tokens]
+            batch_global = batch_global.view(1, -1, self.n_class_tokens * self.ninp)
+            batch_global = batch_global.expand(batch_feats.shape[0], -1, -1) # batch x seq x ncls * feats
+            batch = torch.cat((batch_feats, batch_global), dim=2) # each of the prediction heads gets cls token as additional input
+        else:
+            batch = batch_feats
         
         dfs_idx1_logits = self.fc_dfs_idx1(batch) #seq x batch x feat
         dfs_idx2_logits = self.fc_dfs_idx2(batch)
