@@ -420,7 +420,59 @@ class DFSCodeSeq2SeqFC(nn.Module):
         else:
             raise ValueError("unsupported method")
     
-    def fwd_code(self, dfs_codes, features=False):
+    def fwd_code(self, dfs_codes, targets, features=False):
+        """
+        only fills in the masked inputs
+        """
+        dfs1 = dfs_codes['dfs_from'].clone()
+        dfs2 = dfs_codes['dfs_to'].clone()
+        if features:
+            atm1 = torch.argmax(dfs_codes['atm_from'][:, :, :100], dim=2)+1
+            atm2 = torch.argmax(dfs_codes['atm_to'][:, :, :100], dim=2)+1
+            bnd = torch.argmax(dfs_codes['bnd'][:, :, 1:5], dim=2) #single doble triple aromatic is used in chemprop
+            tmp = bnd.clone()
+            bnd[tmp==2] = 3
+            bnd[tmp==3] = 2
+        else:
+            atm1 = torch.argmax(dfs_codes['atm_from'], dim=2)+1
+            atm2 = torch.argmax(dfs_codes['atm_to'], dim=2)+1
+            bnd = torch.argmax(dfs_codes['bnd'], dim=2)
+        #missing_dfs1 = dfs1 == -1
+        #missing_dfs2 = dfs2 == -1 
+        #missing_atm1 = torch.all(dfs_codes['atm_from'] == -1, dim=2)
+        #missing_atm2 = torch.all(dfs_codes['atm_to'] == -1, dim=2)
+        #missing_bnd = torch.all(dfs_codes['bnd'] == -1, dim=2)
+        mask = dfs1 == -1000
+        missing_dfs1 = (targets[:, :, 0] != -1)*(~mask)
+        missing_dfs2 = (targets[:, :, 1] != -1)*(~mask)
+        missing_atm1 = (targets[:, :, 2] != -1)*(~mask)
+        missing_atm2 = (targets[:, :, 3] != -1)*(~mask)
+        missing_bnd = (targets[:, :, 4] != -1)*(~mask)
+        dfs1_logits, dfs2_logits, atm1_logits, atm2_logits, bnd_logits = self.forward(dfs_codes)
+        dfs1[missing_dfs1] = torch.argmax(dfs1_logits, dim=2)[missing_dfs1]
+        dfs2[missing_dfs2] = torch.argmax(dfs2_logits, dim=2)[missing_dfs2]
+        # here we don't need +1 cuz it is trained without the +1...
+        atm1[missing_atm1] = torch.argmax(atm1_logits, dim=2)[missing_atm1]
+        atm2[missing_atm2] = torch.argmax(atm2_logits, dim=2)[missing_atm2]
+        bnd[missing_bnd] = torch.argmax(bnd_logits, dim=2)[missing_bnd]
+        dfs1[mask] = -1000
+        dfs2[mask] = -1000
+        atm1[mask] = -1000
+        atm2[mask] = -1000
+        bnd[mask] = -1000
+        dfs_code_list = []
+        for d1, d2, a1, a2, b in zip(dfs1.T, dfs2.T, atm1.T, atm2.T, bnd.T):
+            mask = d1 != -1000
+            code = torch.cat((d1[mask].unsqueeze(1), 
+                               d2[mask].unsqueeze(1), 
+                               a1[mask].unsqueeze(1), 
+                               b[mask].unsqueeze(1), 
+                               a2[mask].unsqueeze(1)), dim=1)
+            dfs_code_list += [code.detach().cpu().numpy().tolist()]
+        return dfs_code_list
+    
+    
+    def fwd_code_legacy(self, dfs_codes, features=False):
         """
         only fills in the masked inputs
 

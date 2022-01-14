@@ -90,7 +90,7 @@ def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
         perm = np.random.permutation(n)
         perm2 = np.random.permutation(n)
         mask = torch.zeros(n, dtype=bool)
-        mask[perm[:int(fraction_missing*n)]] = True
+        mask[perm[:int(fraction_missing*fm*n)]] = True
         delete_target_idx = perm[int(fraction_missing*n):]
         delete_input_idx = perm[:int(fraction_missing*fm*n)]
         input_rnd_idx = perm[int(fraction_missing*fm*n):int(fraction_missing*(fm+fr)*n)]
@@ -429,7 +429,7 @@ def BERTize_entries(code, fraction_missing=0.15, fraction_mask=0.8, fraction_ran
     inp[:,-3:] = code[:, -3:].clone()
     target[:, -3:] = code[:, -3:].clone()
     mask[:, -3:] = False
-    return inp, target, mask
+    return inp, target, mask_delete
 
 def collate_BERT_entries(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False):
         if use_loops:
