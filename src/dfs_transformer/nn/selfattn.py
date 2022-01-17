@@ -458,8 +458,8 @@ class DFSCodeSeq2SeqFC(nn.Module):
         missing_dfs1 = (targets[:, :, 0] != -1)*(~mask)
         missing_dfs2 = (targets[:, :, 1] != -1)*(~mask)
         missing_atm1 = (targets[:, :, 2] != -1)*(~mask)
-        missing_atm2 = (targets[:, :, 3] != -1)*(~mask)
-        missing_bnd = (targets[:, :, 4] != -1)*(~mask)
+        missing_atm2 = (targets[:, :, 4] != -1)*(~mask)
+        missing_bnd = (targets[:, :, 3] != -1)*(~mask)
         dfs1_logits, dfs2_logits, atm1_logits, atm2_logits, bnd_logits = self.forward(dfs_codes)
         dfs1[missing_dfs1] = torch.argmax(dfs1_logits, dim=2)[missing_dfs1]
         dfs2[missing_dfs2] = torch.argmax(dfs2_logits, dim=2)[missing_dfs2]
