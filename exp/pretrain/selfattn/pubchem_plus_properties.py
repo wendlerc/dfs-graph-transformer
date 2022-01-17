@@ -32,8 +32,9 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--loops', dest='loops', action='store_true')
     parser.add_argument('--no_features', dest='no_features', action='store_true')
+    parser.add_argument('--no_properties', dest='no_properties', action='store_true')
     parser.add_argument('--overwrite', type=json.loads, default="{}")
-    parser.set_defaults(loops=False, no_features=False)
+    parser.set_defaults(loops=False, no_features=False, no_properties=False)
     args = parser.parse_args()
     
     config = ConfigDict({'model':{}, 'data':{}, 'training':{}})
@@ -45,7 +46,9 @@ if __name__ == "__main__":
         config.training = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
     
     #config.data.molecular_properties = None #["qed", "rdMolDescriptors.CalcNumHeteroatoms"]
-    
+    if args.no_properties:
+        config.training["no_properties"] = True
+            
     config.model.use_loops = args.loops
 
     for key,value in args.overwrite.items():
@@ -132,8 +135,10 @@ if __name__ == "__main__":
             total += 1
         return score/total
         
-    
-    loss = lambda preds, outputs: loss_old_wrapped(preds, outputs) + property_loss(preds, outputs)
+    if t.no_properties:
+        loss = loss_old_wrapped
+    else:
+        loss = lambda preds, outputs: loss_old_wrapped(preds, outputs) + property_loss(preds, outputs)
     
     if config.training.mode == "min2min":
         collate_fn = functools.partial(collate_BERT, 
@@ -225,7 +230,7 @@ if __name__ == "__main__":
         with open(trainer.es_path+'config.yaml', 'w') as f:
             yaml.dump(config.to_dict(), f, default_flow_style=False)
         if args.name is not None and args.wandb_mode != "offline":
-            trained_model_artifact = wandb.Artifact(args.name, type="model", description="trained selfattn model")
+            trained_model_artifact = wandb.Artifact(run.name, type="model", description="trained selfattn model")
             trained_model_artifact.add_dir(trainer.es_path)
             run.log_artifact(trained_model_artifact)
         
