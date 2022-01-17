@@ -403,6 +403,8 @@ def BERTize_entries(code, fraction_missing=0.15, fraction_mask=0.8, fraction_ran
     
     returns preprocessed input sequences, target sequences and a mask indicating which inputs are part of the 15% masked, orig, rnd
     """
+    assert (code[:, 0] < 110).all()
+    assert (code[:, 1] < 110).all()
     fraction_orig = 1. - fraction_mask - fraction_rand
     fo = fraction_orig
     fm = fraction_mask
@@ -423,12 +425,19 @@ def BERTize_entries(code, fraction_missing=0.15, fraction_mask=0.8, fraction_ran
     mask_random_out = torch.tensor(mask_random_out)
     inp = code.clone()
     target = code.clone()
-    inp[mask_random_inp] = target[mask_random_out] 
+    inp[mask_random_inp[:, 0], 0] = target[mask_random_out[:, 0], 0]
+    inp[mask_random_inp[:, 1], 1] = target[mask_random_out[:, 1], 1]
+    inp[mask_random_inp[:, 2], 2] = target[mask_random_out[:, 2], 2]
+    inp[mask_random_inp[:, 3], 3] = target[mask_random_out[:, 3], 3]
+    inp[mask_random_inp[:, 4], 4] = target[mask_random_out[:, 4], 4]
+    # it needs to be done like tihs because there are also dimensions 5-7...
     target[~mask] = -1
     inp[mask_delete] = -1
     inp[:,-3:] = code[:, -3:].clone()
     target[:, -3:] = code[:, -3:].clone()
     mask[:, -3:] = False
+    assert (inp[:, 0] < 110).all()
+    assert (inp[:, 1] < 110).all()
     return inp, target, mask_delete
 
 def collate_BERT_entries(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False):
