@@ -11,7 +11,7 @@ import yaml
 import torch
 from collections import OrderedDict
 from ml_collections import ConfigDict
-from ..nn import DFSCodeSeq2SeqFC
+from ..nn.selfattn import DFSCodeSeq2SeqFC
 
 def load_selfattn_wandb(pretrained_model,
                         pretrained_entity="dfstransformer", 
