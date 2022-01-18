@@ -7,9 +7,10 @@ import glob
 import torch
 import tqdm
 from .utils import get_n_files
-from ..utils import isValidMoleculeDFSCode
+from ..utils import isValidMoleculeDFSCode, DFSCode2Smiles
 import torch.nn.functional as F
 from torch_geometric.nn.models.schnet import GaussianSmearing
+from rdkit import Chem
 
 
 class PubChem(Dataset):
@@ -108,7 +109,11 @@ class PubChem(Dataset):
                     continue
                 if len(d['edge_attr']) > 2*self.max_edges:
                     continue
-                if not isValidMoleculeDFSCode(code['min_dfs_code']):
+                if self.filter_unencoded and not isValidMoleculeDFSCode(code['min_dfs_code']):
+                    continue
+                smiles_orig = Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
+                smiles_rec = DFSCode2Smiles(code['min_dfs_code'])
+                if self.filter_unencoded and not smiles_orig == smiles_rec:
                     continue
                 
                 z = torch.tensor(d['z'], dtype=torch.long)

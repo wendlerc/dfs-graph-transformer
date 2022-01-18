@@ -37,7 +37,7 @@ def Graph2Mol(edge_list, node_labels, edge_labels):
     # add atoms to mol and keep track of index
     node_to_idx = {}
     for node, atomic_num in enumerate(node_labels):
-        a=Chem.Atom(atomic_num)
+        a=Chem.Atom(int(atomic_num))
         idx = mol.AddAtom(a)
         node_to_idx[node] = idx
     
