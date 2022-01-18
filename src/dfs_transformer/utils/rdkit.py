@@ -46,7 +46,7 @@ def Graph2Mol(edge_list, node_labels, edge_labels):
             mol.AddBond(node_to_idx[node_from], node_to_idx[node_to], bond_types[elabel])
             
     # Convert RWMol to Mol object
-    mol = mol.GetMol()            
+    mol = mol.GetMol()   
     return mol
 
 
@@ -59,6 +59,10 @@ def isValid(mol, verbose=False):
             print(e)
         return False
     
+    
+def Smiles2Mol(smiles):
+    return Chem.MolFromSmiles(smiles)
+
 
 def Mol2Smiles(mol):
     return Chem.MolToSmiles(mol)
@@ -68,8 +72,8 @@ def DFSCode2Smiles(dfs_code):
     return Chem.MolToSmiles(Graph2Mol(*DFSCode2Graph(dfs_code)))
 
 
-def isValidMoleculeDFSCode(dfs_code):
-    return isValid(Graph2Mol(*DFSCode2Graph(dfs_code)))
+def isValidMoleculeDFSCode(dfs_code, verbose=False):
+    return isValid(Graph2Mol(*DFSCode2Graph(dfs_code)), verbose=verbose)
 
 
 def Smiles2DFSCode(smiles, useMin=False, useHs=False, addLoops=False, max_nodes=np.inf, max_edges=np.inf):
@@ -146,7 +150,7 @@ def computeChemicalValidity(dfs_codes):
         except:
             valid_list += [False]
     valid = np.asarray(valid_list)
-    return valid.sum()/len(valid)
+    return valid.sum()/len(valid), valid
 
 
 def computeChemicalValidityAndNovelty(smiles, dfs_codes):

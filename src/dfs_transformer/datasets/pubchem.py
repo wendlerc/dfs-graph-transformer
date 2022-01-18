@@ -7,6 +7,7 @@ import glob
 import torch
 import tqdm
 from .utils import get_n_files
+from ..utils import isValidMoleculeDFSCode
 import torch.nn.functional as F
 from torch_geometric.nn.models.schnet import GaussianSmearing
 
@@ -16,7 +17,7 @@ class PubChem(Dataset):
     def __init__(self, path, n_used = None, n_splits = None, max_nodes=np.inf,
                  max_edges=np.inf, useHs=False, addLoops=False, memoryEfficient=False,
                  transform=None, exclude=[], noFeatures=False, useDists=False,
-                 molecular_properties=None):
+                 molecular_properties=None, filter_unencoded=True):
         """
         Parameters
         ----------
@@ -29,6 +30,7 @@ class PubChem(Dataset):
         max_edges : The default is np.inf.
         n_mols_per_dataset : int, number of molecules to process per split. The default is np.inf.
         molecular_properties: list, list of names of molecular properties to load
+        filter_unencoded: bool, whether to filter molecules that cannot be encoded with current DFS code representation
         """
         self.path = path
         self.data = []
@@ -51,6 +53,7 @@ class PubChem(Dataset):
         if useDists:
             self.dist_emb = GaussianSmearing(0., 4., 50)
         self.molecular_properties = molecular_properties
+        self.filter_unencoded = filter_unencoded
         self.prepare()
         
         
@@ -104,6 +107,8 @@ class PubChem(Dataset):
                 if len(d['z']) > self.max_nodes:
                     continue
                 if len(d['edge_attr']) > 2*self.max_edges:
+                    continue
+                if not isValidMoleculeDFSCode(code['min_dfs_code']):
                     continue
                 
                 z = torch.tensor(d['z'], dtype=torch.long)
