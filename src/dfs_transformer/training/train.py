@@ -35,6 +35,11 @@ class Trainer():
         data = next(iter(loader)),
         loss and metrics will be computed on model(data[:-1]), data[-1] 
         """
+        if wandb_run is None:
+            self.wandb = WandbDummy()
+        else:
+            self.wandb = wandb_run 
+        
         self.model = model
         self.loader = loader
         self.validloader = validloader
@@ -61,13 +66,13 @@ class Trainer():
         self.es_period = es_period
         if es_path is None:
             self.es_path = "./models/tmp/%d/"%np.random.randint(100000)
+            t = self.wandb.config.training
+            t['es_path'] = self.es_path
+            self.wandb.config.update({'training':t}, allow_val_change=True)
         else:
             self.es_path = es_path
         self.es_argument = es_argument
-        if wandb_run is None:
-            self.wandb = WandbDummy()
-        else:
-            self.wandb = wandb_run 
+        
         
         if param_groups is not None:
             self.optim = self.optimizer(param_groups)

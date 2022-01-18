@@ -57,6 +57,7 @@ class TrainerBarlow():
         """
         data = next(iter(loader)),
         """
+        self.wandb = wandb_run
         self.input_idxs = input_idxs
         self.output_idxs = output_idxs 
         self.model = model
@@ -105,10 +106,12 @@ class TrainerBarlow():
         print('es period', self.es_period)
         if es_path is None:
             self.es_path = "./models/tmp/%d/"%np.random.randint(100000)
+            t = self.wandb.config.training
+            t['es_path'] = self.es_path
+            self.wandb.config.update({'training':t}, allow_val_change=True)
         else:
             self.es_path = es_path
         self.es_argument = es_argument
-        self.wandb = wandb_run 
         
         if param_groups is not None:
             self.optim = self.optimizer(param_groups)
