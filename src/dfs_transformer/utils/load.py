@@ -11,11 +11,12 @@ import yaml
 import torch
 from collections import OrderedDict
 from ml_collections import ConfigDict
-from .. import DFSCodeSeq2SeqFC
+from ..nn import DFSCodeSeq2SeqFC
 
 def load_selfattn_wandb(pretrained_model,
                         pretrained_entity="dfstransformer", 
                         pretrained_project="pubchem_newdataloader",
+                        version="latest",
                         wandb_dir="./wandb",
                         strict=False,
                         device="cpu"):
@@ -26,7 +27,7 @@ def load_selfattn_wandb(pretrained_model,
                      job_type="inference",
                      dir=wandb_dir,
                      settings=wandb.Settings(start_method='fork'))
-    model_at = run.use_artifact(pretrained_model + ":latest")
+    model_at = run.use_artifact(pretrained_model + ":%s"%version)
     model_dir = model_at.download(root=wandb_dir+'/artifacts/%s/'%pretrained_model)
     run.finish()
     return load_DFSCodeSeq2SeqFC(model_dir, device, strict=strict)

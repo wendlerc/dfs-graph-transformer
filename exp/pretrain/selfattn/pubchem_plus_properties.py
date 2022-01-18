@@ -192,7 +192,8 @@ if __name__ == "__main__":
     validloader = None
     if d.valid_path is not None:
         validset = PubChem(d.valid_path, max_nodes=d.max_nodes, max_edges=d.max_edges, noFeatures=d.no_features,
-                           molecular_properties=d.molecular_properties, useDists=d.useDists, useHs=d.useHs)
+                           molecular_properties=d.molecular_properties, useDists=d.useDists, useHs=d.useHs,
+                           filter_unencoded=d.filter_unencoded)
         validloader = DataLoader(validset, batch_size=t.batch_size, shuffle=True, 
                                  pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
                                  prefetch_factor=t.prefetch_factor)
@@ -213,7 +214,8 @@ if __name__ == "__main__":
             for split in range(n_splits):
                 dataset = PubChem(d.path, n_used = d.n_used, max_nodes=d.max_nodes, 
                                   max_edges=d.max_edges, exclude=exclude, noFeatures=d.no_features,
-                                  molecular_properties=d.molecular_properties, useDists=d.useDists, useHs=d.useHs)
+                                  molecular_properties=d.molecular_properties, useDists=d.useDists, useHs=d.useHs,
+                                  filter_unencoded=d.filter_unencoded)
                 loader = DataLoader(dataset, batch_size=t.batch_size, shuffle=True, 
                                     pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
                                     prefetch_factor=t.prefetch_factor)

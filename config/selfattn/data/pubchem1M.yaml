@@ -9,6 +9,7 @@ max_edges: 110 #110
 molecular_properties: null
 useDists: false
 useHs: false
+filter_unencoded: true
 
     
     
