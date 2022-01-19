@@ -36,10 +36,15 @@ ATOM_FEATURES = {
     ],
 }
 # len(choices) + 1 to include room for uncommon values; + 2 at end for IsAromatic and mass
+ATOM_FEATURES_SHAPES = {key:len(choices)+1 for key, choices in ATOM_FEATURES.items()}
+ATOM_FEATURES_SHAPES['is_aromatic'] = 1
+ATOM_FEATURES_SHAPES['mass'] = 1 
+
 ATOM_FDIM = sum(len(choices) + 1 for choices in ATOM_FEATURES.values()) + 2
 BOND_FEATURES = {
     'bond_type': [-1, BT.SINGLE, BT.DOUBLE, BT.TRIPLE, BT.AROMATIC]
     }
+BOND_FEATURES_SHAPES = {key:len(choices)+1 for key, choices in BOND_FEATURES.items()}
 
 
 def parseChempropAtomFeatures(features, true_values=False, missing_value=-1, padding_value=-1000):
@@ -75,7 +80,7 @@ def parseChempropAtomFeatures(features, true_values=False, missing_value=-1, pad
         feature_dict[fkey][mask] = padding_value
         feature_dict[fkey][mask_missing] = missing_value
         pos += len(foptions)+1
-    feature_dict['is_aromatic'] = features[:, :, pos].numpy().astype(bool)
+    feature_dict['is_aromatic'] = features[:, :, pos].numpy()
     feature_dict['mass'] = features[:, :, pos+1].numpy()
     return feature_dict
 
@@ -121,7 +126,7 @@ def FeaturizedDFSCodes2Nx(dfs_code, padding_value=-1000):
                            chiral_tag=atm1_batch['chiral_tag'][edge_id, batch_id],
                            hybridization=atm1_batch['hybridization'][edge_id, batch_id],
                            num_total_hs=atm1_batch['num_Hs'][edge_id, batch_id],
-                           is_aromatic=atm1_batch['is_aromatic'][edge_id, batch_id] is True)
+                           is_aromatic=bool(atm1_batch['is_aromatic'][edge_id, batch_id] == 1.))
                 nodes_added.add(d1)
             if d2 not in nodes_added:
                 G.add_node(d2.item(),
@@ -130,7 +135,7 @@ def FeaturizedDFSCodes2Nx(dfs_code, padding_value=-1000):
                            chiral_tag=atm2_batch['chiral_tag'][edge_id, batch_id],
                            hybridization=atm2_batch['hybridization'][edge_id, batch_id],
                            num_total_hs=atm2_batch['num_Hs'][edge_id, batch_id],
-                           is_aromatic=atm2_batch['is_aromatic'][edge_id, batch_id] is True)
+                           is_aromatic=bool(atm2_batch['is_aromatic'][edge_id, batch_id] == 1.))
                 nodes_added.add(d2)
                 
             G.add_edge(d1.item(), d2.item(), 
@@ -348,6 +353,54 @@ def computeChemicalValidityAndNovelty(smiles, dfs_codes):
     valid = np.asarray(valid_list)
     same = np.asarray(same_list)
     return valid.sum()/len(valid), same.sum()/len(same)
+
+def mol_to_nx(mol):
+    G = nx.Graph()
+
+    for atom in mol.GetAtoms():
+        G.add_node(atom.GetIdx(),
+                   atomic_num=atom.GetAtomicNum(),
+                   formal_charge=atom.GetFormalCharge(),
+                   chiral_tag=atom.GetChiralTag(),
+                   hybridization=atom.GetHybridization(),
+                   num_explicit_hs=atom.GetNumExplicitHs(),
+                   is_aromatic=atom.GetIsAromatic())
+    for bond in mol.GetBonds():
+        G.add_edge(bond.GetBeginAtomIdx(),
+                   bond.GetEndAtomIdx(),
+                   bond_type=bond.GetBondType())
+    return G
+
+def nx_to_mol(G):
+    mol = Chem.RWMol()
+    atomic_nums = nx.get_node_attributes(G, 'atomic_num')
+    chiral_tags = nx.get_node_attributes(G, 'chiral_tag')
+    formal_charges = nx.get_node_attributes(G, 'formal_charge')
+    node_is_aromatics = nx.get_node_attributes(G, 'is_aromatic')
+    node_hybridizations = nx.get_node_attributes(G, 'hybridization')
+    num_explicit_hss = nx.get_node_attributes(G, 'num_explicit_hs')
+    node_to_idx = {}
+    for node in G.nodes():
+        a=Chem.Atom(atomic_nums[node])
+        a.SetChiralTag(chiral_tags[node])
+        a.SetFormalCharge(formal_charges[node])
+        a.SetIsAromatic(node_is_aromatics[node])
+        a.SetHybridization(node_hybridizations[node])
+        a.SetNumExplicitHs(num_explicit_hss[node])
+        idx = mol.AddAtom(a)
+        node_to_idx[node] = idx
+
+    bond_types = nx.get_edge_attributes(G, 'bond_type')
+    for edge in G.edges():
+        first, second = edge
+        ifirst = node_to_idx[first]
+        isecond = node_to_idx[second]
+        bond_type = bond_types[first, second]
+        mol.AddBond(ifirst, isecond, bond_type)
+
+    Chem.SanitizeMol(mol)
+    return mol
+
     
 
     
