@@ -13,7 +13,14 @@ from .utils import PositionalEncoding
 from .rnn import DFSCodeEncoderLSTM
 from einops import rearrange
 from torchdistill.core.forward_hook import ForwardHookManager
+from ..utils.rdkit import ATOM_FEATURES_SHAPES, BOND_FEATURES_SHAPES, parseChempropAtomFeatures, parseChempropBondFeatures
+from copy import deepcopy
 
+NFEAT_SHAPES = deepcopy(ATOM_FEATURES_SHAPES)
+#we don't want to predict degree and mass
+del NFEAT_SHAPES['degree']
+del NFEAT_SHAPES['mass']
+EFEAT_SHAPES = deepcopy(BOND_FEATURES_SHAPES)
 
 class TransformerPlusHeads(nn.Module):
     def __init__(self, encoder, head_specs):
@@ -26,9 +33,9 @@ class TransformerPlusHeads(nn.Module):
         self.head_dict = nn.ModuleDict({name.replace(".", "_"): nn.Linear(self.ninp* self.encoder.n_class_tokens, n_output) for name, n_output in head_specs.items()})
             
     def forward(self, dfs_code):
-        dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, features = self.encoder(dfs_code)
+        sequence_predictions, features = self.encoder(dfs_code)
         property_predictions = {name.replace("_", "."): head(features) for name, head in self.head_dict.items()}
-        return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, property_predictions
+        return sequence_predictions, property_predictions
     
 
 class DFSCodeEncoder(nn.Module):
@@ -282,7 +289,10 @@ class DFSCodeSeq2SeqFC(nn.Module):
                  nlayers=6, n_class_tokens=1, dim_feedforward=2048, 
                  max_nodes=250, max_edges=500, dropout=0.1, 
                  missing_value=None, return_features=False, 
-                 encoder_class="DFSCodeEncoder", cls_for_seq=True, **kwargs):
+                 encoder_class="DFSCodeEncoder", cls_for_seq=True, 
+                 nfeat_shapes=NFEAT_SHAPES, 
+                 efeat_shapes=EFEAT_SHAPES,
+                 **kwargs): 
         super().__init__()
         self.nlayers = nlayers
         self.n_class_tokens = n_class_tokens
@@ -314,19 +324,30 @@ class DFSCodeSeq2SeqFC(nn.Module):
         self.cls_for_seq = cls_for_seq
         self.return_features = return_features
         
+        # initialize all the prediction heads for the pretraining task
         if not cls_for_seq:
-            self.fc_dfs_idx1 = nn.Linear(self.ninp, max_nodes)
-            self.fc_dfs_idx2 = nn.Linear(self.ninp, max_nodes)
-            self.fc_atom1 = nn.Linear(self.ninp, n_atoms)
-            self.fc_atom2 = nn.Linear(self.ninp, n_atoms)
-            self.fc_bond = nn.Linear(self.ninp, n_bonds)
+            dim_in = self.ninp
         else:
-            self.fc_dfs_idx1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
-            self.fc_dfs_idx2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
-            self.fc_atom1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
-            self.fc_atom2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
-            self.fc_bond = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_bonds)
+            dim_in = self.ninp + n_class_tokens*self.ninp
+            
+        fcs = {'dfs_from': nn.Linear(dim_in, max_nodes), 
+               'dfs_to': nn.Linear(dim_in, max_nodes)}
+        for key, dim in nfeat_shapes.items():
+            if dim == 1:
+                dim_out = dim+1
+            else:
+                dim_out = dim
+            fcs[key+'_from'] = nn.Linear(dim_in, dim_out)
+            fcs[key+'_to'] = nn.Linear(dim_in, dim_out)
+            
+        for key, dim in efeat_shapes.items():
+            if dim == 1:
+                dim_out = dim+1
+            else:
+                dim_out = dim
+            fcs[key] = nn.Linear(dim_in, dim_out)
         
+        self.fcs = nn.ModuleDict(fcs)
         self.cls_token = nn.Parameter(torch.empty(n_class_tokens, 1, self.ninp), requires_grad=True)
         nn.init.normal_(self.cls_token, mean=.0, std=.5)
         
@@ -343,16 +364,14 @@ class DFSCodeSeq2SeqFC(nn.Module):
         else:
             batch = batch_feats
         
-        dfs_idx1_logits = self.fc_dfs_idx1(batch) #seq x batch x feat
-        dfs_idx2_logits = self.fc_dfs_idx2(batch)
-        atom1_logits = self.fc_atom1(batch)
-        atom2_logits = self.fc_atom2(batch)
-        bond_logits = self.fc_bond(batch)
+        # dictionary of key: tensor with shape nseq x nbatch x dim_of_predicted_feat
+        predicted_sequences = {key: fc(batch) for key, fc in self.fcs.items()} 
+        
         if self.return_features:
             features = self_attn[:self.n_class_tokens]
             features = rearrange(features, 'd0 d1 d2 -> d1 (d0 d2)')
-            return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, features
-        return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits
+            return predicted_sequences, features
+        return predicted_sequences
     
     def encode(self, dfs_codes, method="cls"):
         if method == "cls3":
@@ -619,110 +638,3 @@ class DFSCodeSeq2SeqFC(nn.Module):
         return dfs_code_list
         
     
-class DFSCodeSeq2SeqFCFeatures(nn.Module):
-    def __init__(self, n_node_features, n_edge_features, 
-                 n_atoms, n_bonds, emb_dim=120, nhead=12, 
-                 nlayers=6, n_class_tokens=1, dim_feedforward=2048, 
-                 max_nodes=250, max_edges=500, dropout=0.1, 
-                 missing_value=None, **kwargs):
-        super().__init__()
-        self.ninp = emb_dim * 5
-        self.n_class_tokens = n_class_tokens
-        atom_embedding = nn.Linear(n_node_features, emb_dim)
-        bond_embedding = nn.Linear(n_edge_features, emb_dim)
-        self.encoder = DFSCodeEncoder(atom_embedding, bond_embedding, 
-                                      emb_dim=emb_dim, nhead=nhead, nlayers=nlayers, 
-                                      dim_feedforward=dim_feedforward,
-                                      max_nodes=max_nodes, max_edges=max_edges, 
-                                      dropout=dropout, missing_value=missing_value)
-        self.fc_dfs_idx1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
-        self.fc_dfs_idx2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, max_nodes)
-        self.fc_atom1 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
-        self.fc_atom2 = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_atoms)
-        self.fc_bond = nn.Linear(self.ninp + n_class_tokens*self.ninp, n_bonds)
-        self.fc_feats = nn.Linear(self.ninp + n_class_tokens*self.ninp, 2*n_node_features+n_edge_features)
-        
-        self.cls_token = nn.Parameter(torch.empty(n_class_tokens, 1, self.ninp), requires_grad=True)
-        nn.init.normal_(self.cls_token, mean=.0, std=.5)
-        
-    def forward(self, C, N, E):
-        self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
-        
-        batch_feats = self_attn[self.n_class_tokens:] 
-        batch_global = self_attn[:self.n_class_tokens]
-        batch_global = batch_global.view(1, -1, self.n_class_tokens * self.ninp)
-        batch_global = batch_global.expand(batch_feats.shape[0], -1, -1) # batch x seq x ncls * feats
-        batch = torch.cat((batch_feats, batch_global), dim=2) # each of the prediction heads gets cls token as additional input
-        
-        dfs_idx1_logits = self.fc_dfs_idx1(batch) #seq x batch x feat
-        dfs_idx2_logits = self.fc_dfs_idx2(batch)
-        atom1_logits = self.fc_atom1(batch)
-        atom2_logits = self.fc_atom2(batch)
-        bond_logits = self.fc_bond(batch)
-        feature_logits = self.fc_feats(batch)
-        return dfs_idx1_logits, dfs_idx2_logits, atom1_logits, atom2_logits, bond_logits, \
-            feature_logits
-    
-    def encode(self, C, N, E, method="cls"):
-        ncls = self.n_class_tokens
-        self_attn, _ = self.encoder(C, N, E, class_token=self.cls_token) # seq x batch x feat
-        if method == "cls":
-            #features = self_attn[:ncls].permute(1, 0, 2).reshape(self_attn.shape[1], -1)
-            features = self_attn[:ncls]
-            features = rearrange(features, 'd0 d1 d2 -> d1 (d0 d2)')
-        elif method == "sum":
-            features = torch.sum(self_attn[ncls:], dim=0)
-        elif method == "mean":
-            features = torch.mean(self_attn[ncls:], dim=0)
-        elif method == "max":
-            features = torch.max(self_attn[ncls:], dim=0)[0]
-        elif method == "cls-mean-max":
-            fcls = self_attn[0]
-            fmean = torch.mean(self_attn[ncls:], dim=0)
-            fmax = torch.max(self_attn[ncls:], dim=0)[0]
-            features = torch.cat((fcls, fmean, fmax), dim=1)
-        elif method == "min-mean-max":
-            fmin = torch.min(self_attn, dim=0)[0]
-            fmean = torch.mean(self_attn, dim=0)
-            fmax = torch.max(self_attn, dim=0)[0]
-            features = torch.cat((fmin, fmean, fmax), dim=1)
-        elif method == "min-mean-max-std":
-            fmin = torch.min(self_attn, dim=0)[0]
-            fmean = torch.mean(self_attn, dim=0)
-            fmax = torch.max(self_attn, dim=0)[0]
-            fstd = torch.std(self_attn, dim=0)
-            features = torch.cat((fmin, fmean, fmax, fstd), dim=1)
-        elif method == "max-of-cls":
-            features = torch.max(self_attn[:ncls], dim=0)[0]
-        elif method == "mean-of-cls":
-            features = torch.mean(self_attn[:ncls], dim=0)
-        elif method == "max-mean-of-cls":
-            features = torch.cat((torch.max(self_attn[:ncls], dim=0)[0], torch.mean(self_attn[:ncls], dim=0)), dim=1)
-        elif int(method) < ncls:
-            features = self_attn[int(method)]
-        else:
-            raise ValueError("unsupported method")
-        return features.view(self_attn.shape[1], -1)
-    
-    def get_n_encoding(self, method="cls"):
-        ncls = self.n_class_tokens
-        if method == "cls":
-            return ncls * self.ninp
-        elif method in {"sum", "mean", "max", "max-of-cls", "mean-of-cls"}:
-            return self.ninp
-        elif method == "cls-mean-max":
-            return ncls * self.ninp + 2*self.ninp
-        elif method == "min-mean-max":
-            return 3*self.ninp
-        elif method == "min-mean-max-std":
-            return 4*self.ninp
-        elif method == "max-mean-of-cls":
-            return 2*self.ninp
-        elif int(method) < ncls:
-            return self.ninp
-        else:
-            raise ValueError("unsupported method")
-            
-
-        
-

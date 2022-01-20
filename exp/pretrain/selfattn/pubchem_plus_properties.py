@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 import sys
 sys.path = ['./src'] + sys.path
 from dfs_transformer import DFSCodeSeq2SeqFC, TrainerNew, PubChem, get_n_files, TransformerPlusHeads
-from dfs_transformer.training.utils import seq_loss, seq_acc, collate_BERT, collate_rnd2min, collate_BERT_entries
+from dfs_transformer.training.utils import dict_loss, dict_acc, collate_BERT, collate_rnd2min, collate_BERT_entries
 import argparse
 import yaml
 import functools
@@ -24,7 +24,7 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (2*2048, rlimit[1]))
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
-    parser.add_argument('--wandb_project', type=str, default="pubchem_postbug")
+    parser.add_argument('--wandb_project', type=str, default="pubchem_newencoding")
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--yaml_model', type=str, default="./config/selfattn/model/bert.yaml") 
     parser.add_argument('--yaml_data', type=str, default="./config/selfattn/data/pubchem1M.yaml")
@@ -87,8 +87,8 @@ if __name__ == "__main__":
     
     ce = nn.CrossEntropyLoss(ignore_index=-1)
     mse = nn.MSELoss()
-    loss_old = functools.partial(seq_loss, ce=ce, m=m)
-    loss_old_wrapped = lambda preds, outputs: loss_old(preds[:5], outputs[0])
+    loss_old = functools.partial(dict_loss, ce=ce)
+    loss_old_wrapped = lambda preds, outputs: loss_old(preds[0], outputs[0])
     
     def property_loss(preds, outputs):
         gt_dict = outputs[1]
@@ -150,25 +150,17 @@ if __name__ == "__main__":
                                        fraction_missing = config.training.fraction_missing,
                                        use_loops=m.use_loops)
     elif config.training.mode == "rnd2min":
+        raise NotImplemented("implementation not updated yet...")
         collate_fn = functools.partial(collate_rnd2min,
                                        use_loops=m.use_loops)
     elif config.training.mode == "rnd2rnd_entry":
+        raise NotImplemented("implementation not updated yet...")
         collate_fn = functools.partial(collate_BERT_entries, 
                                        mode="rnd2rnd", 
                                        fraction_missing = config.training.fraction_missing,
                                        use_loops=m.use_loops)
     else:
         raise ValueError("unknown config.training.mode %s"%config.training.mode)        
-    
-    fields = ['acc-dfs1', 'acc-dfs2', 'acc-atm1', 'acc-atm2', 'acc-bnd']
-    seq_acc_wrapper = lambda preds, outputs, idx: seq_acc(preds[:5], outputs[0], idx)
-    metrics = {field:functools.partial(seq_acc_wrapper, idx=idx) for idx, field in enumerate(fields)}
-    for key in d.molecular_properties:
-        metrics[key] = functools.partial(property_score, key=key)
-    
-    if len(config.data.molecular_properties) > 0:
-        metrics['mean_acc'] = functools.partial(property_score_mean, classification=True) 
-        metrics['mean_r2'] = functools.partial(property_score_mean, classification=False)
         
     encoder = DFSCodeSeq2SeqFC(**m)
     head_specs = {}
@@ -198,6 +190,17 @@ if __name__ == "__main__":
                                  pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
                                  prefetch_factor=t.prefetch_factor)
         exclude = validset.smiles
+    
+    # metrics that will be logged
+    dict_acc_wrapper = lambda preds, outputs, key: dict_acc(preds[0], outputs[0], key)
+    metrics = {'acc-'+key: functools.partial(dict_acc_wrapper, key=key) for key in encoder.fcs.keys()}
+    fields = ['acc-dfs_from', 'acc-dfs_to', 'acc-atomic_num_from', 'acc-atomic_num_to', 'acc-bond_type']
+    for key in d.molecular_properties:
+        metrics[key] = functools.partial(property_score, key=key)
+    
+    if len(config.data.molecular_properties) > 0:
+        metrics['mean_acc'] = functools.partial(property_score_mean, classification=True) 
+        metrics['mean_r2'] = functools.partial(property_score_mean, classification=False)
     
     trainer = TrainerNew(model, None, loss, validloader=validloader, metrics=metrics, 
                          metric_pbar_keys=fields+["mean_acc", "mean_r2"], wandb_run = run, **t)
