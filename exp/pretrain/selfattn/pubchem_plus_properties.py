@@ -161,20 +161,6 @@ if __name__ == "__main__":
                                        use_loops=m.use_loops)
     else:
         raise ValueError("unknown config.training.mode %s"%config.training.mode)        
-    
-    dict_acc_wrapper = lambda preds, outputs, key: dict_acc(preds[0], outputs[0], key)
-    metrics = {'acc-dfs1': functools.partial(dict_acc_wrapper, key='dfs_from'),
-               'acc-dfs2': functools.partial(dict_acc_wrapper, key='dfs_to'),
-               'acc-atm1': functools.partial(dict_acc_wrapper, key='atomic_num_from'),
-               'acc-atm2': functools.partial(dict_acc_wrapper, key='atomic_num_to'),
-               'acc-bnd': functools.partial(dict_acc_wrapper, key='bond_type')}
-    fields = list(metrics.keys())
-    for key in d.molecular_properties:
-        metrics[key] = functools.partial(property_score, key=key)
-    
-    if len(config.data.molecular_properties) > 0:
-        metrics['mean_acc'] = functools.partial(property_score_mean, classification=True) 
-        metrics['mean_r2'] = functools.partial(property_score_mean, classification=False)
         
     encoder = DFSCodeSeq2SeqFC(**m)
     head_specs = {}
@@ -204,6 +190,17 @@ if __name__ == "__main__":
                                  pin_memory=t.pin_memory, collate_fn=collate_fn, num_workers=t.num_workers,
                                  prefetch_factor=t.prefetch_factor)
         exclude = validset.smiles
+    
+    # metrics that will be logged
+    dict_acc_wrapper = lambda preds, outputs, key: dict_acc(preds[0], outputs[0], key)
+    metrics = {'acc-'+key: functools.partial(dict_acc_wrapper, key=key) for key in encoder.fcs.keys()}
+    fields = ['acc-dfs_from', 'acc-dfs_to', 'acc-atomic_num_from', 'acc-atomic_num_to', 'acc-bond_type']
+    for key in d.molecular_properties:
+        metrics[key] = functools.partial(property_score, key=key)
+    
+    if len(config.data.molecular_properties) > 0:
+        metrics['mean_acc'] = functools.partial(property_score_mean, classification=True) 
+        metrics['mean_r2'] = functools.partial(property_score_mean, classification=False)
     
     trainer = TrainerNew(model, None, loss, validloader=validloader, metrics=metrics, 
                          metric_pbar_keys=fields+["mean_acc", "mean_r2"], wandb_run = run, **t)
