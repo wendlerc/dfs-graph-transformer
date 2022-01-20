@@ -7,7 +7,7 @@ import glob
 import torch
 import tqdm
 from .utils import get_n_files
-from ..utils import isValidMoleculeDFSCode, DFSCode2Smiles
+from ..utils import isValidMoleculeDFSCode, DFSCode2Smiles, nx_to_mol, mol_to_nx
 import torch.nn.functional as F
 from torch_geometric.nn.models.schnet import GaussianSmearing
 from rdkit import Chem
@@ -18,7 +18,7 @@ class PubChem(Dataset):
     def __init__(self, path, n_used = None, n_splits = None, max_nodes=np.inf,
                  max_edges=np.inf, useHs=False, addLoops=False, memoryEfficient=False,
                  transform=None, exclude=[], noFeatures=False, useDists=False,
-                 molecular_properties=None, filter_unencoded=True):
+                 molecular_properties=None, filter_unencoded=False):
         """
         Parameters
         ----------
@@ -104,16 +104,18 @@ class PubChem(Dataset):
                 if smiles not in props_all:
                     continue
             if code['min_dfs_code'] is not None and len(code['min_dfs_code']) > 1:
+                if self.filter_unencoded:
+                    # filter molecules that cannot be handled by the new encoding
+                    smiles1 = Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
+                    smiles2 = Chem.MolToSmiles(nx_to_mol(mol_to_nx(Chem.MolFromSmiles(smiles))))
+                    if smiles1 != smiles2:
+                        continue
+                
                 d = d_all[smiles]
                 if len(d['z']) > self.max_nodes:
                     continue
+                    
                 if len(d['edge_attr']) > 2*self.max_edges:
-                    continue
-                if self.filter_unencoded and not isValidMoleculeDFSCode(code['min_dfs_code']):
-                    continue
-                smiles_orig = Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
-                smiles_rec = DFSCode2Smiles(code['min_dfs_code'])
-                if self.filter_unencoded and not smiles_orig == smiles_rec:
                     continue
                 
                 z = torch.tensor(d['z'], dtype=torch.long)

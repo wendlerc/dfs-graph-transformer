@@ -13,7 +13,8 @@ import dfs_code
 from chemprop.features.featurization import atom_features, bond_features
 from copy import deepcopy
 from collections import defaultdict
-
+from einops import rearrange
+from ..utils import FeaturizedDFSCodes2Dict
 
 def to_cuda(T, device):
     if type(T) is dict:
@@ -23,6 +24,39 @@ def to_cuda(T, device):
     else:
         return T.to(device)
 
+
+def dict_loss(pred, target, ce=nn.CrossEntropyLoss(ignore_index=-1)):
+    """
+    
+    Parameters
+    ----------
+    pred : dict of predicted sequences
+    target : dict of target sequences
+    ce : torch loss function, optional
+        DESCRIPTION. The default is nn.CrossEntropyLoss(ignore_index=-1).
+
+    Returns
+    -------
+    loss over all sequences.
+    """
+    loss = 0.
+    for key, seq in pred.items():
+        tgt = target[key]
+        loss += ce(rearrange(seq, 'd0 d1 d2 -> (d0 d1) d2'),
+                   rearrange(tgt, 'd0 d1 -> (d0 d1)'))
+    return loss
+
+
+def dict_acc(pred, target, key):
+    with torch.no_grad():
+        tgt = rearrange(target[key], 'd0 d1 -> (d0 d1)')
+        prd = rearrange(pred[key], 'd0 d1 d2 -> (d0 d1) d2')
+        mask = tgt != -1
+        n_tgts = torch.sum(mask)
+        acc = (torch.argmax(prd[mask], axis=1) == tgt[mask]).sum()/n_tgts
+        return acc
+    
+        
 def seq_loss(pred, target, m, ce=nn.CrossEntropyLoss(ignore_index=-1)):
     """
     
@@ -126,9 +160,12 @@ def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
         n = len(code)
         perm = np.random.permutation(n)
         perm2 = np.random.permutation(n)
+        mask_input = torch.zeros(n, dtype=bool)
+        mask_input[perm[:int(fraction_missing*fm*n)]] = True
+        mask_input = ~mask_input
         mask_target = torch.zeros(n, dtype=bool)
-        mask_target[perm[:int(fraction_missing*fm*n)]] = True
-        mask_input = ~mask_target
+        mask_target[perm[int(fraction_missing*n):]] = True
+        mask_target = ~mask_target
         delete_target_idx = perm[int(fraction_missing*n):]
         delete_input_idx = perm[:int(fraction_missing*fm*n)]
         input_rnd_idx = perm[int(fraction_missing*fm*n):int(fraction_missing*(fm+fr)*n)]
@@ -191,7 +228,8 @@ def collate_BERT(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False):
         inputs, outputs, masks_input, masks_output = BERTize(code_batch, fraction_missing=fraction_missing)
         dfs_codes_input = dfs_codes_to_dicts(inputs, node_batch, edge_batch, masks_input, padding_value=-1000)
         dfs_codes_output = dfs_codes_to_dicts(outputs, node_batch, edge_batch, masks_output, padding_value=-1)
-                
+        dfs_codes_output = FeaturizedDFSCodes2Dict(dfs_codes_output)
+        
         if "properties" in dlist[0].keys():
             prop_batch = {name: torch.tensor(plist).clone() for name, plist in prop_batch.items()}
             return dfs_codes_input, dfs_codes_output, prop_batch

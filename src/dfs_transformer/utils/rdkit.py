@@ -103,6 +103,23 @@ def parseChempropBondFeatures(features, true_values=False, missing_value=-1, pad
     return feature_dict
 
 
+def FeaturizedDFSCodes2Dict(dfs_code, missing_value=-1, padding_value=-1000):
+    dfs1_batch = dfs_code["dfs_from"]
+    dfs2_batch = dfs_code["dfs_to"]
+    atm1_batch = parseChempropAtomFeatures(dfs_code["atm_from"], true_values=False, missing_value=missing_value, padding_value=padding_value)
+    atm2_batch = parseChempropAtomFeatures(dfs_code["atm_to"], true_values=False, missing_value=missing_value, padding_value=padding_value)
+    bnd_batch = parseChempropBondFeatures(dfs_code["bnd"], true_values=False, missing_value=missing_value, padding_value=padding_value)
+    bnd_dict = {key: torch.tensor(val, dtype=torch.long) for key, val in bnd_batch.items()}
+    atm1_dict = {key+'_from': torch.tensor(val, dtype=torch.long) for key, val in atm1_batch.items()}
+    atm2_dict = {key+'_to': torch.tensor(val, dtype=torch.long) for key, val in atm2_batch.items()}
+    d = {"dfs_from": dfs1_batch,
+         "dfs_to": dfs2_batch}
+    d.update(atm1_dict)
+    d.update(atm2_dict)
+    d.update(bnd_dict)
+    return d
+    
+    
 def FeaturizedDFSCodes2Nx(dfs_code, padding_value=-1000):
     if torch.any(dfs_code["dfs_from"] == -1):
         raise NotImplemented("does not account for missing values yet")
