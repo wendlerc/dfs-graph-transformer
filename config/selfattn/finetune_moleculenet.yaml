@@ -19,7 +19,7 @@ es_period: null
 es_patience: 10
 es_improvement: 0.0
 pretrained_class: 'DFSCodeSeq2SeqFC' # this is ancient and should be instead put into the config.model
-pretrained_project: 'pubchem_newdataloader'
+pretrained_project: 'pubchem_newencoding'
 pretrained_entity: 'dfstransformer'
 pretrained_model: null
 pretrained_yaml: './config/selfattn/model/bert.yaml' # yaml to fall back to in case there is none in wandb artifact
