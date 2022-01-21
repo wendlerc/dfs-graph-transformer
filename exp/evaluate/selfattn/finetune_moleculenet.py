@@ -117,7 +117,7 @@ class TransformerPlusHead(nn.Module):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
-    parser.add_argument('--wandb_project', type=str, default="moleculenet10-finetune-newloader")
+    parser.add_argument('--wandb_project', type=str, default="moleculenet10-finetune-newencoding")
     parser.add_argument('--wandb_mode', type=str, default="online")
     parser.add_argument('--wandb_dir', type=str, default="./wandb")
     parser.add_argument('--yaml', type=str, default="./config/selfattn/finetune_moleculenet.yaml") 
