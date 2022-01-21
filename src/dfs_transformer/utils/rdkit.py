@@ -35,6 +35,26 @@ ATOM_FEATURES = {
         Chem.rdchem.HybridizationType.SP3D2
     ],
 }
+# this is dirty but ye... i need the unk values... -> when unk prediction fill in a 0
+ATOM_FEATURES_UNK = {
+    'atomic_num': list(range(1, MAX_ATOMIC_NUM+1)),
+    'degree': [0, 1, 2, 3, 4, 5, 0],
+    'formal_charge': [-1, -2, 1, 2, 0, 0],
+    'chiral_tag': [Chem.rdchem.ChiralType.CHI_UNSPECIFIED,
+                   Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
+                   Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+                   Chem.rdchem.ChiralType.CHI_OTHER,
+                   Chem.rdchem.ChiralType.CHI_UNSPECIFIED],
+    'num_Hs': [0, 1, 2, 3, 4, 0],
+    'hybridization': [
+        Chem.rdchem.HybridizationType.SP,
+        Chem.rdchem.HybridizationType.SP2,
+        Chem.rdchem.HybridizationType.SP3,
+        Chem.rdchem.HybridizationType.SP3D,
+        Chem.rdchem.HybridizationType.SP3D2,
+        Chem.rdchem.HybridizationType.SP
+    ],
+}
 # len(choices) + 1 to include room for uncommon values; + 2 at end for IsAromatic and mass
 ATOM_FEATURES_SHAPES = {key:len(choices)+1 for key, choices in ATOM_FEATURES.items()}
 ATOM_FEATURES_SHAPES['is_aromatic'] = 1
@@ -43,6 +63,9 @@ ATOM_FEATURES_SHAPES['mass'] = 1
 ATOM_FDIM = sum(len(choices) + 1 for choices in ATOM_FEATURES.values()) + 2
 BOND_FEATURES = {
     'bond_type': [-1, BT.SINGLE, BT.DOUBLE, BT.TRIPLE, BT.AROMATIC]
+    }
+BOND_FEATURES_UNK = {
+    'bond_type': [-1, BT.SINGLE, BT.DOUBLE, BT.TRIPLE, BT.AROMATIC, BT.SINGLE]
     }
 BOND_FEATURES_SHAPES = {key:len(choices)+1 for key, choices in BOND_FEATURES.items()}
 
@@ -104,11 +127,11 @@ def parseChempropBondFeatures(features, true_values=False, missing_value=-1, pad
 
 
 def FeaturizedDFSCodes2Dict(dfs_code, missing_value=-1, padding_value=-1000):
-    dfs1_batch = dfs_code["dfs_from"]
-    dfs2_batch = dfs_code["dfs_to"]
-    atm1_batch = parseChempropAtomFeatures(dfs_code["atm_from"], true_values=False, missing_value=missing_value, padding_value=padding_value)
-    atm2_batch = parseChempropAtomFeatures(dfs_code["atm_to"], true_values=False, missing_value=missing_value, padding_value=padding_value)
-    bnd_batch = parseChempropBondFeatures(dfs_code["bnd"], true_values=False, missing_value=missing_value, padding_value=padding_value)
+    dfs1_batch = dfs_code["dfs_from"].detach().cpu()
+    dfs2_batch = dfs_code["dfs_to"].detach().cpu()
+    atm1_batch = parseChempropAtomFeatures(dfs_code["atm_from"].detach().cpu(), true_values=False, missing_value=missing_value, padding_value=padding_value)
+    atm2_batch = parseChempropAtomFeatures(dfs_code["atm_to"].detach().cpu(), true_values=False, missing_value=missing_value, padding_value=padding_value)
+    bnd_batch = parseChempropBondFeatures(dfs_code["bnd"].detach().cpu(), true_values=False, missing_value=missing_value, padding_value=padding_value)
     bnd_dict = {key: torch.tensor(val, dtype=torch.long) for key, val in bnd_batch.items()}
     atm1_dict = {key+'_from': torch.tensor(val, dtype=torch.long) for key, val in atm1_batch.items()}
     atm2_dict = {key+'_to': torch.tensor(val, dtype=torch.long) for key, val in atm2_batch.items()}
@@ -119,16 +142,53 @@ def FeaturizedDFSCodes2Dict(dfs_code, missing_value=-1, padding_value=-1000):
     d.update(bnd_dict)
     return d
     
+def DFSCodesDict2Nx(dfs_code, padding_value=-1000):
+    if torch.any(dfs_code["dfs_from"] == -1):
+        raise NotImplementedError("does not account for missing values yet")
+    
+    dfs1_batch = dfs_code['dfs_from']
+    dfs2_batch = dfs_code['dfs_to']
+    graphs = []
+    for batch_id, (dfs1, dfs2) in enumerate(zip(dfs1_batch.T, dfs2_batch.T)):
+        G = nx.Graph()
+        nodes_added = set()
+        for edge_id, (d1, d2) in enumerate(zip(dfs1, dfs2)):
+            if d1 == padding_value or d2 == padding_value:
+                break
+            if d1 not in nodes_added:
+                G.add_node(d1.item(),
+                           atomic_num=dfs_code['atomic_num_from'][edge_id, batch_id].item()+1,
+                           formal_charge=ATOM_FEATURES_UNK['formal_charge'][dfs_code['formal_charge_from'][edge_id, batch_id].item()],
+                           chiral_tag=ATOM_FEATURES_UNK['chiral_tag'][dfs_code['chiral_tag_from'][edge_id, batch_id].item()],
+                           hybridization=ATOM_FEATURES_UNK['hybridization'][dfs_code['hybridization_from'][edge_id, batch_id].item()],
+                           num_total_hs=dfs_code['num_Hs_from'][edge_id, batch_id].item(),
+                           is_aromatic=bool(dfs_code['is_aromatic_from'][edge_id, batch_id].item() == 1.))
+                nodes_added.add(d1)
+            if d2 not in nodes_added:
+                G.add_node(d2.item(),
+                           atomic_num=dfs_code['atomic_num_to'][edge_id, batch_id].item()+1,
+                           formal_charge=ATOM_FEATURES_UNK['formal_charge'][dfs_code['formal_charge_to'][edge_id, batch_id].item()],
+                           chiral_tag=ATOM_FEATURES_UNK['chiral_tag'][dfs_code['chiral_tag_to'][edge_id, batch_id].item()],
+                           hybridization=ATOM_FEATURES_UNK['hybridization'][dfs_code['hybridization_to'][edge_id, batch_id].item()],
+                           num_total_hs=dfs_code['num_Hs_to'][edge_id, batch_id].item(),
+                           is_aromatic=bool(dfs_code['is_aromatic_to'][edge_id, batch_id].item() == 1.))
+                nodes_added.add(d2)
+                
+            G.add_edge(d1.item(), d2.item(), 
+                       bond_type=BOND_FEATURES_UNK['bond_type'][dfs_code["bond_type"][edge_id, batch_id].item()])
+        graphs += [G]
+    return graphs
+
     
 def FeaturizedDFSCodes2Nx(dfs_code, padding_value=-1000):
     if torch.any(dfs_code["dfs_from"] == -1):
-        raise NotImplemented("does not account for missing values yet")
+        raise NotImplementedError("does not account for missing values yet")
     dfs1_batch = dfs_code["dfs_from"]
     dfs2_batch = dfs_code["dfs_to"]
     atm1_batch = parseChempropAtomFeatures(dfs_code["atm_from"], true_values=True)
     atm2_batch = parseChempropAtomFeatures(dfs_code["atm_to"], true_values=True)
     bnd_batch = parseChempropBondFeatures(dfs_code["bnd"], true_values=True)
-    
+
     graphs = []
     for batch_id, (dfs1, dfs2) in enumerate(zip(dfs1_batch.T, dfs2_batch.T)):
         G = nx.Graph()
