@@ -16,6 +16,7 @@ from torchdistill.core.forward_hook import ForwardHookManager
 from ..utils.rdkit import ATOM_FEATURES_SHAPES, BOND_FEATURES_SHAPES, parseChempropAtomFeatures, parseChempropBondFeatures
 from ..utils import DFSCodesDict2Nx, FeaturizedDFSCodes2Dict
 from copy import deepcopy
+from collections import defaultdict
 
 NFEAT_SHAPES = deepcopy(ATOM_FEATURES_SHAPES)
 #we don't want to predict degree and mass
@@ -453,10 +454,73 @@ class DFSCodeSeq2SeqFC(nn.Module):
             raise ValueError("unsupported method")
     
     
-    def fwd_graph(self, dfs_codes, targets):
+    def fwd_smart(self, dfs_codes, targets):
         mask = dfs_codes['dfs_from'] == -1000
         dfs_codes_dict = FeaturizedDFSCodes2Dict(dfs_codes)
         pred_codes = self.forward(dfs_codes)
+        # parse the known atom features from the input into a dict to reuse them later
+        known_atom_features = defaultdict(dict)
+        dfs_from = dfs_codes_dict['dfs_from']
+        dfs_to = dfs_codes_dict['dfs_to']
+        for key, feats in dfs_codes_dict.items():
+            if key != 'dfs_from' and '_from' in key:
+                fkey = key[:-5]
+                for eid, (dfs_batch, feat_batch) in enumerate(zip(dfs_from, feats)):
+                    for bid, (dfs_idx, feat) in enumerate(zip(dfs_batch, feat_batch)):
+                        if targets[key][eid, bid].item() != -1:
+                            continue
+                        entry_key = (bid, dfs_idx.item()) 
+                        if feat not in [-1, -1000]  and entry_key not in known_atom_features[fkey]:
+                            known_atom_features[fkey][entry_key] = feat.item()
+            elif key != 'dfs_to' and '_to' in key:
+                fkey = key[:-3]
+                for eid, (dfs_batch, feat_batch) in enumerate(zip(dfs_to, feats)):
+                    for bid, (dfs_idx, feat) in enumerate(zip(dfs_batch, feat_batch)):
+                        if targets[key][eid, bid].item() != -1:
+                            continue
+                        entry_key = (bid, dfs_idx.item()) 
+                        if feat not in [-1, -1000] and entry_key not in known_atom_features[fkey]:
+                            known_atom_features[fkey][entry_key] = feat.item()
+        
+        for (pkey, pred), (tkey, tgt) in zip(pred_codes.items(), targets.items()):
+            tmask = tgt != -1
+            new = dfs_codes_dict[pkey].clone()
+            new[tmask] = torch.argmax(pred.detach().cpu(), dim=2)[tmask]
+            new[mask] = -1000
+            pred_codes[pkey] = new
+            
+        # overwrite atom features for the entries where we already know them from the inputs
+        dfs_from = pred_codes['dfs_from']
+        dfs_to = pred_codes['dfs_to']
+        for key, feats in pred_codes.items():
+            if key != 'dfs_from' and '_from' in key:
+                fkey = key[:-5]
+                for eid, (dfs_batch, feat_batch) in enumerate(zip(dfs_from, feats)):
+                    for bid, (dfs_idx, feat) in enumerate(zip(dfs_batch, feat_batch)):
+                        entry_key = (bid, dfs_idx.item()) 
+                        if entry_key in known_atom_features[fkey]:
+                            if pred_codes[key][eid, bid] != known_atom_features[fkey][entry_key]:
+                                #print('%s dfs_id %d: %d -> %d'%(key, dfs_idx.item(), pred_codes[key][eid, bid], known_atom_features[fkey][entry_key]))
+                                pred_codes[key][eid, bid] = known_atom_features[fkey][entry_key]
+                                
+            elif key != 'dfs_to' and '_to' in key:
+                fkey = key[:-3]
+                for eid, (dfs_batch, feat_batch) in enumerate(zip(dfs_to, feats)):
+                    for bid, (dfs_idx, feat) in enumerate(zip(dfs_batch, feat_batch)):
+                        entry_key = (bid, dfs_idx.item()) 
+                        if entry_key in known_atom_features[fkey]:
+                            if pred_codes[key][eid, bid] != known_atom_features[fkey][entry_key]:
+                                #print('%s dfs_id %d: %d -> %d'%(key, dfs_idx.item(), pred_codes[key][eid, bid], known_atom_features[fkey][entry_key]))
+                                pred_codes[key][eid, bid] = known_atom_features[fkey][entry_key]
+        
+        return DFSCodesDict2Nx(pred_codes, padding_value=-1000)
+    
+    
+    def fwd_graph(self, dfs_codes, targets, pred_codes=None):
+        mask = dfs_codes['dfs_from'] == -1000
+        dfs_codes_dict = FeaturizedDFSCodes2Dict(dfs_codes)
+        if pred_codes is None:
+            pred_codes = self.forward(dfs_codes)
         for (pkey, pred), (tkey, tgt) in zip(pred_codes.items(), targets.items()):
             tmask = tgt != -1
             new = dfs_codes_dict[pkey].clone()
