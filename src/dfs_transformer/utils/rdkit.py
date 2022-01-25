@@ -12,6 +12,8 @@ import dfs_code
 import numpy as np
 import networkx as nx 
 import torch
+import torch.nn as nn
+from collections import defaultdict, Counter
 
 bond_types =  {0: BT.SINGLE, 1: BT.DOUBLE, 2: BT.AROMATIC, 3: BT.TRIPLE}
 bonds =  {BT.SINGLE: 0, BT.DOUBLE: 1, BT.AROMATIC: 2, BT.TRIPLE: 3, "loop": 4}
@@ -141,39 +143,82 @@ def FeaturizedDFSCodes2Dict(dfs_code, missing_value=-1, padding_value=-1000):
     d.update(atm2_dict)
     d.update(bnd_dict)
     return d
+
+
+def Dict2FeaturizedDFSCodes(dfs_dict, padding_mask):
+    dfs_from = torch.argmax(dfs_dict['dfs_from'], dim=2)
+    dfs_to = torch.argmax(dfs_dict['dfs_to'], dim=2)
+    atm_from = torch.zeros((*dfs_dict['dfs_from'].shape[:-1], 133), device=dfs_dict['dfs_from'].device)
+    atm_to = torch.zeros((*dfs_dict['dfs_from'].shape[:-1], 133), device=dfs_dict['dfs_from'].device)
+    bnd = torch.zeros((*dfs_dict['dfs_from'].shape[:-1], 14), device=dfs_dict['dfs_from'].device)
+    smx = nn.Softmax(dim=2)
+    sm = lambda x: smx(x)
+    bnd[:, :, :6] = sm(dfs_dict['bond_type'])
+    pos = 0
+    for fkey, foptions in ATOM_FEATURES.items():
+        if fkey+"_from" in dfs_dict:
+            atm_from[:, :, pos:pos+len(foptions)+1] = sm(dfs_dict[fkey+"_from"])
+        if fkey+"_to" in dfs_dict:
+            atm_to[:, :, pos:pos+len(foptions)+1] = sm(dfs_dict[fkey+"_to"])    
+        pos += len(foptions)+1
+    atm_from[:, :, pos] = sm(dfs_dict['is_aromatic_from'])[:, :, 1]
+    atm_to[:, :, pos] = sm(dfs_dict['is_aromatic_to'])[:, :, 1]
+    dfs_from[padding_mask] = -1000
+    dfs_to[padding_mask] = -1000
+    atm_from[padding_mask] = -1000
+    atm_to[padding_mask] = -1000
+    bnd[padding_mask] = -1000
+    return {'dfs_from': dfs_from, 'dfs_to': dfs_to,
+            'atm_from': atm_from, 'atm_to': atm_to,
+            'bnd': bnd}
     
+
+def majorityvote(l):
+    return Counter(l).most_common(1)[0][0]
+
+
 def DFSCodesDict2Nx(dfs_code, padding_value=-1000):
     if torch.any(dfs_code["dfs_from"] == -1):
         raise NotImplementedError("does not account for missing values yet")
-    
     dfs1_batch = dfs_code['dfs_from']
     dfs2_batch = dfs_code['dfs_to']
     graphs = []
+    node_features = ['atomic_num', 'formal_charge', 'chiral_tag', 'hybridization', 'num_total_hs', 'is_aromatic']
     for batch_id, (dfs1, dfs2) in enumerate(zip(dfs1_batch.T, dfs2_batch.T)):
         G = nx.Graph()
-        nodes_added = set()
+        node_feature_dict = {}
         for edge_id, (d1, d2) in enumerate(zip(dfs1, dfs2)):
+            d1 = d1.item()
+            d2 = d2.item()
             if d1 == padding_value or d2 == padding_value:
                 break
-            if d1 not in nodes_added:
-                G.add_node(d1.item(),
-                           atomic_num=dfs_code['atomic_num_from'][edge_id, batch_id].item()+1,
-                           formal_charge=ATOM_FEATURES_UNK['formal_charge'][dfs_code['formal_charge_from'][edge_id, batch_id].item()],
-                           chiral_tag=ATOM_FEATURES_UNK['chiral_tag'][dfs_code['chiral_tag_from'][edge_id, batch_id].item()],
-                           hybridization=ATOM_FEATURES_UNK['hybridization'][dfs_code['hybridization_from'][edge_id, batch_id].item()],
-                           num_total_hs=dfs_code['num_Hs_from'][edge_id, batch_id].item(),
-                           is_aromatic=bool(dfs_code['is_aromatic_from'][edge_id, batch_id].item() == 1.))
-                nodes_added.add(d1)
-            if d2 not in nodes_added:
-                G.add_node(d2.item(),
-                           atomic_num=dfs_code['atomic_num_to'][edge_id, batch_id].item()+1,
-                           formal_charge=ATOM_FEATURES_UNK['formal_charge'][dfs_code['formal_charge_to'][edge_id, batch_id].item()],
-                           chiral_tag=ATOM_FEATURES_UNK['chiral_tag'][dfs_code['chiral_tag_to'][edge_id, batch_id].item()],
-                           hybridization=ATOM_FEATURES_UNK['hybridization'][dfs_code['hybridization_to'][edge_id, batch_id].item()],
-                           num_total_hs=dfs_code['num_Hs_to'][edge_id, batch_id].item(),
-                           is_aromatic=bool(dfs_code['is_aromatic_to'][edge_id, batch_id].item() == 1.))
-                nodes_added.add(d2)
+            
+            if d1 not in node_feature_dict:
+                node_feature_dict[d1] = {key: [] for key in node_features}
+            if d2 not in node_feature_dict:
+                node_feature_dict[d2] = {key: [] for key in node_features}
                 
+            node_feature_dict[d1]['atomic_num'] += [dfs_code['atomic_num_from'][edge_id, batch_id].item()+1]
+            node_feature_dict[d1]['formal_charge'] += [ATOM_FEATURES_UNK['formal_charge'][dfs_code['formal_charge_from'][edge_id, batch_id].item()]]
+            node_feature_dict[d1]['chiral_tag'] += [ATOM_FEATURES_UNK['chiral_tag'][dfs_code['chiral_tag_from'][edge_id, batch_id].item()]]
+            node_feature_dict[d1]['hybridization'] += [ATOM_FEATURES_UNK['hybridization'][dfs_code['hybridization_from'][edge_id, batch_id].item()]]
+            node_feature_dict[d1]['num_total_hs'] += [dfs_code['num_Hs_from'][edge_id, batch_id].item()]
+            node_feature_dict[d1]['is_aromatic'] += [bool(dfs_code['is_aromatic_from'][edge_id, batch_id].item() == 1.)]
+            node_feature_dict[d2]['atomic_num'] += [dfs_code['atomic_num_to'][edge_id, batch_id].item()+1]
+            node_feature_dict[d2]['formal_charge'] += [ATOM_FEATURES_UNK['formal_charge'][dfs_code['formal_charge_to'][edge_id, batch_id].item()]]
+            node_feature_dict[d2]['chiral_tag'] += [ATOM_FEATURES_UNK['chiral_tag'][dfs_code['chiral_tag_to'][edge_id, batch_id].item()]]
+            node_feature_dict[d2]['hybridization'] += [ATOM_FEATURES_UNK['hybridization'][dfs_code['hybridization_to'][edge_id, batch_id].item()]]
+            node_feature_dict[d2]['num_total_hs'] += [dfs_code['num_Hs_to'][edge_id, batch_id].item()]
+            node_feature_dict[d2]['is_aromatic'] += [bool(dfs_code['is_aromatic_to'][edge_id, batch_id].item() == 1.)]
+        
+        # add nodes
+        for node, feats in node_feature_dict.items():
+            G.add_node(node, **{key: majorityvote(val) for key, val in feats.items()})
+
+        # add edges
+        for edge_id, (d1, d2) in enumerate(zip(dfs1, dfs2)): 
+            if d1 == padding_value or d2 == padding_value:
+                break
             G.add_edge(d1.item(), d2.item(), 
                        bond_type=BOND_FEATURES_UNK['bond_type'][dfs_code["bond_type"][edge_id, batch_id].item()])
         graphs += [G]
@@ -277,7 +322,6 @@ def Nx2Mol(G):
 
 
 def DFSCode2Graph(dfs_code):
-    # TODO: maybe check whether code is valid
     edge_list = []
     edge_labels = []
     node_dict = {}
@@ -431,6 +475,7 @@ def computeChemicalValidityAndNovelty(smiles, dfs_codes):
     same = np.asarray(same_list)
     return valid.sum()/len(valid), same.sum()/len(same)
 
+
 def mol_to_nx(mol):
     G = nx.Graph()
 
@@ -447,6 +492,7 @@ def mol_to_nx(mol):
                    bond.GetEndAtomIdx(),
                    bond_type=bond.GetBondType())
     return G
+
 
 def nx_to_mol(G):
     mol = Chem.RWMol()
