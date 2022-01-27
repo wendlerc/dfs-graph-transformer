@@ -137,7 +137,8 @@ def dfs_codes_to_dicts(code_batch, nfeat_batch, efeat_batch, masks=None, padding
                  for key, values in dfs_codes.items()}
     return dfs_codes
 
-def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
+
+def BERTizeLegacy(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
     """
     Training the language model in BERT is done by predicting 15% of the tokens in the input, that were randomly picked. 
     These tokens are pre-processed as follows — 80% are replaced with a “[MASK]” token, 10% with a random word, and 10% 
@@ -184,7 +185,63 @@ def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1):
     return inputs, targets, masks_input, masks_target
 
 
-def collate_BERT(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False):
+def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1, window=[-2, -1, 0, 1, 2]):
+    """
+    Not pure random, if an edge is deleted also delete the 2 adjacent edges.
+    
+    Training the language model in BERT is done by predicting 15% of the tokens in the input, that were randomly picked. 
+    These tokens are pre-processed as follows — 80% are replaced with a “[MASK]” token, 10% with a random word, and 10% 
+    use the original word. 
+    
+    to get a random word we use the following strategy: we copy an random entry to that position 
+    
+    returns preprocessed input sequences, target sequences and a mask indicating which inputs are part of the 15% masked, orig, rnd
+    """
+    fraction_orig = 1. - fraction_mask - fraction_rand
+    fo = fraction_orig
+    fm = fraction_mask
+    fr = fraction_rand
+    inputs = []
+    targets = []
+    masks_input = []
+    masks_target = []
+    for code in codes:
+        n = len(code)
+        # affected inputs
+        # at least delete 1
+        n_anchors = max(1, int(n * (1/len(window)) * fraction_missing)) # fraction missing should really be renamed to fraction affected
+        perm = np.random.permutation(n)
+        anchors = perm[:n_anchors]
+        affected = []
+        for anchor in anchors:
+            for offset in window:
+                idx = anchor+offset
+                if idx >= 0 and idx < n:
+                    affected += [idx]
+        indices_affected = np.random.permutation(affected)
+        n_aff = len(indices_affected)
+        delete_input_idx = indices_affected[:int(fm*n_aff)]
+        delete_target_idx = np.asarray(list(set(range(n)) - set(affected)))
+        input_rnd_idx = indices_affected[int(fm*n_aff):int((fm+fr)*n_aff)]
+        target_rnd_idx = np.random.permutation(n)[int(fm*n_aff):int((fm+fr)*n_aff)]
+        inp = code.clone()
+        target = code.clone()
+        inp[input_rnd_idx] = target[target_rnd_idx]
+        target[delete_target_idx] = -1
+        inp[delete_input_idx] = -1
+        inputs += [inp]
+        targets += [target]
+        mask_input = torch.zeros(n, dtype=bool)
+        mask_target = torch.zeros(n, dtype=bool)
+        mask_input[delete_input_idx] = True
+        mask_input = ~mask_input
+        mask_target[indices_affected] = True
+        masks_input += [mask_input]
+        masks_target += [mask_target]
+    return inputs, targets, masks_input, masks_target
+
+
+def collate_BERT(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False, window=[-2, -1, 0, 1, 2]):
         node_batch = [] 
         edge_batch = []
         code_batch = []
@@ -225,7 +282,7 @@ def collate_BERT(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False):
                 for name, prop in d.properties.items():
                     prop_batch[name.replace('_', '.')] += [prop]
                     
-        inputs, outputs, masks_input, masks_output = BERTize(code_batch, fraction_missing=fraction_missing)
+        inputs, outputs, masks_input, masks_output = BERTize(code_batch, fraction_missing=fraction_missing, window=window)
         dfs_codes_input = dfs_codes_to_dicts(inputs, node_batch, edge_batch, masks_input, padding_value=-1000)
         dfs_codes_output = dfs_codes_to_dicts(outputs, node_batch, edge_batch, masks_output, padding_value=-1)
         dfs_codes_output = FeaturizedDFSCodes2Dict(dfs_codes_output)
