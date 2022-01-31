@@ -108,7 +108,80 @@ class DFSCodeEncoder(nn.Module):
                                  src_key_padding_mask=src_key_padding_mask)
         return self_attn, src_key_padding_mask
     
+
+class DFSCodeEncoderM3(nn.Module):
+    def __init__(self, atom_embedding, bond_embedding, 
+                 emb_dim=120, nhead=12, nlayers=6, dim_feedforward=2048, 
+                 activation = 'gelu',
+                 max_nodes=250, max_edges=500, dropout=0.1, missing_value=None,
+                 rescale_flag=True, **kwargs):
+        super().__init__()
+        self.ninp = emb_dim * 5
+        self.emb_dfs = PositionalEncoding(emb_dim, dropout=0, max_len=max_nodes)
+        dfs_emb = self.emb_dfs(torch.zeros((max_nodes, 1, emb_dim)))
+        dfs_emb = torch.squeeze(dfs_emb)
+        self.register_buffer('dfs_emb', dfs_emb)
+        self.emb_seq = PositionalEncoding(self.ninp, max_len=max_edges, dropout=dropout)
+        self.emb_atom = atom_embedding
+        self.emb_bond = bond_embedding
+            
+        self.mixer = nn.Sequential(nn.Linear(self.ninp, self.ninp),
+                                   nn.ReLU(inplace=True),
+                                   nn.Linear(self.ninp, 4*self.ninp),
+                                   nn.ReLU(inplace=True),
+                                   nn.Linear(4*self.ninp, self.ninp))
+        
+        self.enc = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=self.ninp, 
+                                                                    nhead=nhead,
+                                                                    dim_feedforward=dim_feedforward,
+                                                                    dropout=dropout, 
+                                                                    activation=activation), nlayers)
+        self.missing_value = missing_value
+        if missing_value is not None:
+            self.missing_token = nn.Parameter(torch.empty(1, self.ninp), requires_grad=True)
+            nn.init.normal_(self.missing_token, mean=.0, std=.5)
+            
+        self.rescale_factor = math.sqrt(self.ninp) if rescale_flag else 1.
+
+    def forward(self, dfs_codes, class_token=None):
+        if self.missing_value is not None:
+            src_key_padding_mask = (dfs_codes['dfs_from'] == -1000).T
+            n_seq = dfs_codes['dfs_from'].shape[0]
+            n_batch = dfs_codes['dfs_from'].shape[1]
+            mask = dfs_codes['dfs_from'] >= 0
+            missing = dfs_codes['dfs_from'] == -1
+            atm_from = dfs_codes['atm_from'][mask]
+            atm1 = self.emb_atom(atm_from)
+            atm_to = dfs_codes['atm_to'][mask]
+            atm2 = self.emb_atom(atm_to)
+            bnd_inp = dfs_codes['bnd'][mask]
+            bnd = self.emb_bond(bnd_inp)
+            code_input = torch.cat((self.dfs_emb[dfs_codes['dfs_from'][mask]],
+                                    self.dfs_emb[dfs_codes['dfs_to'][mask]],
+                                    atm1, atm2, bnd), dim=1)
+            
+            code_emb = torch.ones((n_seq, 
+                                   n_batch, 
+                                   self.ninp), device=dfs_codes['dfs_from'].device)
+            code_emb[mask] *= code_input
+            code_emb[missing] *= self.missing_token
+            code_emb[~src_key_padding_mask.T] = self.mixer(code_emb[~src_key_padding_mask.T])
+            batch = self.emb_seq(code_emb * self.rescale_factor)
+        else:
+            raise NotImplemented('not implemented yet')
+            
+            
+        # batch is of shape (sequence length, batch, d_model)
+        if class_token is None:
+            self_attn = self.enc(batch, src_key_padding_mask=src_key_padding_mask)
+        else:
+            src_key_padding_mask = torch.cat((torch.zeros((batch.shape[1], class_token.shape[0]), dtype=torch.bool, device=batch.device), 
+                                              src_key_padding_mask), dim=1) # n_batch x n_seq
+            self_attn = self.enc(torch.cat((class_token.expand(-1, batch.shape[1], -1), batch), dim=0),
+                                 src_key_padding_mask=src_key_padding_mask)
+        return self_attn, src_key_padding_mask
     
+
 class DFSCodeEncoderEntryBERT(nn.Module):
     def __init__(self, atom_embedding, bond_embedding, 
                  emb_dim=120, nhead=12, nlayers=6, dim_feedforward=2048, 
