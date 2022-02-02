@@ -122,17 +122,19 @@ class Trainer():
                             torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip_gradient_norm)
                         optim.step() 
                     epoch_loss = (epoch_loss*i + loss.item())/(i+1)
-                    log['batch-loss'] = loss
+                    log['batch-loss'] = loss.item()
                     log['loss'] = epoch_loss
                     
                     pbar_string = "Epoch %d: loss %2.6f"%(epoch+1, epoch_loss)
-                    for name, metric in self.metrics.items():
-                        res = metric(pred, output)
-                        epoch_metric[name] = (epoch_metric[name]*i + res.item())/(i+1)
-                        log['batch-'+name] = res
-                        log[name] = epoch_metric[name]
-                        pbar_string += " %2.4f"%epoch_metric[name]
-                    
+                    self.model.eval()
+                    with torch.no_grad():
+                        for name, metric in self.metrics.items():
+                            res = metric(pred, output)
+                            epoch_metric[name] = (epoch_metric[name]*i + res.item())/(i+1)
+                            log['batch-'+name] = res.item()
+                            log[name] = epoch_metric[name]
+                            pbar_string += " %2.4f"%epoch_metric[name]
+                        
                     curr_lr = list(optim.param_groups)[0]['lr']
                     log['learning rate'] = curr_lr
                     pbar.set_description(pbar_string)
@@ -152,7 +154,7 @@ class Trainer():
                         self.model.eval()
                         if self.scorer is not None:
                             with torch.no_grad():
-                                score = self.scorer(model)
+                                score = self.scorer(model).item()
                             self.early_stopping(-score, model)
                             self.wandb.log({"valid-score": score})
                             
@@ -174,7 +176,7 @@ class Trainer():
                                         res = metric(pred, output)
                                         valid_metric[name] = (valid_metric[name]*i + res.item())/(i+1)
                                         valid_log['valid-'+name] = valid_metric[name]
-                                        pbar_string += " %2.4f"%res
+                                        pbar_string += " %2.4f"%res.item()
                                     pbar_valid.set_description(pbar_string)
                                 self.wandb.log(valid_log)
                             if self.es_argument is None:

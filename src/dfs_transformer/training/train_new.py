@@ -149,13 +149,15 @@ class TrainerNew():
                     log['loss'] = epoch_loss
                     
                     pbar_string = "Epoch %d: loss %2.6f"%(epoch+1, epoch_loss)
-                    for name, metric in self.metrics.items():
-                        res = metric(pred, outputs).item()
-                        epoch_metric[name] = (epoch_metric[name]*i + res)/(i+1)
-                        log['batch-'+name] = res
-                        log[name] = epoch_metric[name]
-                        if name in self.metric_pbar_keys:
-                            pbar_string += " %2.4f"%res
+                    self.model.eval()
+                    with torch.no_grad():
+                        for name, metric in self.metrics.items():
+                            res = metric(pred, outputs).item()
+                            epoch_metric[name] = (epoch_metric[name]*i + res)/(i+1)
+                            log['batch-'+name] = res
+                            log[name] = epoch_metric[name]
+                            if name in self.metric_pbar_keys:
+                                pbar_string += " %2.4f"%res
                     
                     curr_lr = list(optim.param_groups)[0]['lr']
                     log['learning rate'] = curr_lr
