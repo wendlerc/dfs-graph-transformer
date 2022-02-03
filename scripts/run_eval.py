@@ -9,6 +9,8 @@ Created on Wed Nov 24 15:27:33 2021
 usage example: 
     
     python scripts/run_eval.py "bsub -G ls_krausea -o /cluster/scratch/wendlerc/lsf_gtrans -n 1 -W 4:00 -R 'rusage[mem=30000, ngpus_excl_p=1]' -R 'select[gpu_mtotal0>=10000]' python exp/evaluate/selfattn/finetune_moleculenet.py --wandb_project moleculenet10-finetune-cluster --model"
+    
+    python scripts/run_eval.py --pretrained_project dfstransformer/pubchem_newencoding "bsub -G ls_krausea -o /cluster/scratch/wendlerc/lsf_gtrans -n 1 -W 4:00 -R 'rusage[mem=30000, ngpus_excl_p=1]' -R 'select[gpu_mtotal0>=10000]' python exp/evaluate/selfattn/finetune_moleculenet.py --wandb_project moleculenet10-finetune-newencoding --model"
 
 """
 
@@ -20,7 +22,8 @@ import shlex
 print("starting evaluation script...")
 parser = argparse.ArgumentParser()
 parser.add_argument('bashcommand', type=str, help="bash \"bashcommand <pretrainedmodel>; will be run")
-parser.add_argument('--pretrained_project', type=str, default="dfstransformer/pubchem_newdataloader")
+parser.add_argument('--pretrained_project', type=str, default="dfstransformer/pubchem_newencoding")
+parser.add_argument('--target_project', type=str, default="dfstransformer/moleculenet10-finetune-newencoding")
 args = parser.parse_args()
 
 print("logging into wandb...")
@@ -31,8 +34,13 @@ except:
 
 print("running experiments...")
 api = wandb.Api()
+
+exclude = [run.name for run in api.runs(args.target_project)]
+
 for run in api.runs(args.pretrained_project):
     try:
+        if run.name in exclude:
+            continue
         artifact = api.artifact(args.pretrained_project+"/%s:latest"%run.name)
         bashCommand = args.bashcommand+' %s'
         bashCommand = bashCommand%(run.name)
