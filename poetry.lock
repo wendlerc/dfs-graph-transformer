@@ -532,6 +532,26 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "grakel"
+version = "0.1.8"
+description = "A scikit-learn compatible library for graph kernels"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
+
+[package.dependencies]
+cython = ">=0.27.3"
+future = ">=0.16.0"
+joblib = "*"
+nose = ">=1.1.2"
+numpy = ">=1.14.0"
+scikit-learn = ">=0.19"
+six = ">=1.11.0"
+
+[package.extras]
+lovasz = ["cvxopt (>=1.2.0)"]
+
+[[package]]
 name = "grpcio"
 version = "1.39.0"
 description = "HTTP/2-based RPC framework"
@@ -1106,6 +1126,14 @@ pyyaml = ["pyyaml"]
 scipy = ["scipy"]
 
 [[package]]
+name = "nose"
+version = "1.3.7"
+description = "nose extends unittest to make testing easier"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "notebook"
 version = "6.4.0"
 description = "A web-based notebook environment for interactive computing"
@@ -1509,18 +1537,6 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 
 [package.dependencies]
 six = ">=1.5"
-
-[[package]]
-name = "python-louvain"
-version = "0.15"
-description = "Louvain algorithm for community detection"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-networkx = "*"
-numpy = "*"
 
 [[package]]
 name = "pytz"
@@ -2051,6 +2067,17 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "tokenizers"
+version = "0.10.3"
+description = "Fast and Customizable Tokenizers"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+testing = ["pytest"]
+
+[[package]]
 name = "torch"
 version = "1.9.0"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
@@ -2063,8 +2090,8 @@ typing-extensions = "*"
 
 [[package]]
 name = "torch-geometric"
-version = "1.7.2"
-description = "Geometric Deep Learning Extension Library for PyTorch"
+version = "2.0.3"
+description = "Graph Neural Network Library for PyTorch"
 category = "main"
 optional = false
 python-versions = ">=3.6"
@@ -2076,15 +2103,16 @@ networkx = "*"
 numpy = "*"
 pandas = "*"
 pyparsing = "*"
-python-louvain = "*"
+PyYAML = "*"
 rdflib = "*"
 requests = "*"
 scikit-learn = "*"
 scipy = "*"
 tqdm = "*"
+yacs = "*"
 
 [package.extras]
-test = ["pytest", "pytest-runner", "pytest-cov", "mock"]
+test = ["pytest", "pytest-cov", "mock"]
 
 [[package]]
 name = "torchdistill"
@@ -2306,6 +2334,17 @@ parallel = ["dask"]
 viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
 [[package]]
+name = "yacs"
+version = "0.1.8"
+description = "Yet Another Configuration System"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+PyYAML = "*"
+
+[[package]]
 name = "zipp"
 version = "3.5.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -2320,7 +2359,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "58862b3211c51049219d5554270f78cfd3a927444400eaf8dea06333ce2dffea"
+content-hash = "19cfa8f7b3da01bad91c70775ac818c00832b349552a7bee38f2a744be2bf7a8"
 
 [metadata.files]
 absl-py = [
@@ -2706,6 +2745,29 @@ googledrivedownloader = [
     {file = "googledrivedownloader-0.4-py2.py3-none-any.whl", hash = "sha256:26ef906c4a038de6fb36f375b0cb0af6f0b6d7ea9ce019a3a08abc50fd6a3b73"},
     {file = "googledrivedownloader-0.4.tar.gz", hash = "sha256:4b34c1337b2ff3bf2bd7581818efbdcaea7d50ffd484ccf80809688f5ca0e204"},
 ]
+grakel = [
+    {file = "grakel-0.1.8-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:14412985d6cffb4332546198e3e142a3918b6ae463dbfbba555394cdc9bfef9f"},
+    {file = "grakel-0.1.8-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:10363192fa9330c4b54b404e80656d9247bccc42414aa1541727cd77f4176a71"},
+    {file = "grakel-0.1.8-cp27-cp27m-manylinux1_x86_64.whl", hash = "sha256:d365f5ade5fd84b541de142d6883f0dd1732fb1d3da6c42bc27c73db41be49fc"},
+    {file = "grakel-0.1.8-cp27-cp27m-manylinux2010_i686.whl", hash = "sha256:94d2177682b2e9b4ee8794594a803d930e0380e72e9577d14b3efa735565800f"},
+    {file = "grakel-0.1.8-cp27-cp27m-manylinux2010_x86_64.whl", hash = "sha256:366aa03d334fb3b59c02e1b31557a3dd25316b2bf07cf877601afecb31235703"},
+    {file = "grakel-0.1.8-cp27-cp27mu-manylinux1_i686.whl", hash = "sha256:44ce6ead290fe66ee45eaac1f7800fdbb91af274d9a8dcee00693c861d8d3ddc"},
+    {file = "grakel-0.1.8-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:5689b8927c42c410994698619071819b1dc15d43561adda41ca45cced69fc3dd"},
+    {file = "grakel-0.1.8-cp27-cp27mu-manylinux2010_i686.whl", hash = "sha256:226b1cbc3fbc348bc68ceea5ebd823fc1446eae5de6379cbcfe2de3b541fbc3f"},
+    {file = "grakel-0.1.8-cp27-cp27mu-manylinux2010_x86_64.whl", hash = "sha256:927428484d2886a101ec2b772afda53c55604309a4bf22ecdc8d0e04f54305dd"},
+    {file = "grakel-0.1.8-cp35-cp35m-macosx_10_9_x86_64.whl", hash = "sha256:e094940b144fe907dfc7e480b0714716cb38eda5b2d3c240f8170161561423d3"},
+    {file = "grakel-0.1.8-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:71316752e5925cc0662b526c31de3fbb2eba8061e326612b351bfb2cab0ee6ad"},
+    {file = "grakel-0.1.8-cp35-cp35m-manylinux2010_x86_64.whl", hash = "sha256:b55060d17f622a6a0d73b35913c1b67bfcbcd04c979e46af5486124fe3b0e444"},
+    {file = "grakel-0.1.8-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:b58ae44d30a76550e1baa0cb614dd2e7d907d68c8046f91b1fa53732093d1125"},
+    {file = "grakel-0.1.8-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:a6113d90ce3b96718b7f3d0a3b95d87dbe31754d4e164b877faf20bc582bd92c"},
+    {file = "grakel-0.1.8-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:e4ec875fd0086a99fb041b59037da20c81839c8c18c304d89649a506b02c159d"},
+    {file = "grakel-0.1.8-cp36-cp36m-win_amd64.whl", hash = "sha256:97f28b6c806a00775524010d35472f5abb76ef1d1dd0e715ea2990250c8d4762"},
+    {file = "grakel-0.1.8-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:8c1d0a83f71f48a653cd18464d5f4f04bd4f32af1c5247110293ddc9461ea0fd"},
+    {file = "grakel-0.1.8-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:5e5674b9f2331c178681c6e1f1b59bf251b1270bba0210e9b340663560fac7e1"},
+    {file = "grakel-0.1.8-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:8b1b68b11e16f1ca767ccd4b69d9cb434556c0c9dd1c5aae71ee48ad1d71dbde"},
+    {file = "grakel-0.1.8-cp37-cp37m-win_amd64.whl", hash = "sha256:c4eed1179f6c83eaeea854f316a57d6a7588a4f9b14d893a0edb804b260ae01b"},
+    {file = "grakel-0.1.8.zip", hash = "sha256:44cbfbeadc3d7cf8de22fdb59081b2fc36b9a2cbdeedd848ac6ea85208009a31"},
+]
 grpcio = [
     {file = "grpcio-1.39.0-cp27-cp27m-macosx_10_10_x86_64.whl", hash = "sha256:4163e022f365406be2da78db890035463371effea172300ce5af8a768142baf3"},
     {file = "grpcio-1.39.0-cp27-cp27m-manylinux2010_i686.whl", hash = "sha256:02e8a8b41db8e13df53078355b439363e4ac46d0ac9a8a461a39e42829e2bcf8"},
@@ -3003,6 +3065,11 @@ nest-asyncio = [
 networkx = [
     {file = "networkx-2.5.1-py3-none-any.whl", hash = "sha256:0635858ed7e989f4c574c2328380b452df892ae85084144c73d8cd819f0c4e06"},
     {file = "networkx-2.5.1.tar.gz", hash = "sha256:109cd585cac41297f71103c3c42ac6ef7379f29788eb54cb751be5a663bb235a"},
+]
+nose = [
+    {file = "nose-1.3.7-py2-none-any.whl", hash = "sha256:dadcddc0aefbf99eea214e0f1232b94f2fa9bd98fa8353711dacb112bfcbbb2a"},
+    {file = "nose-1.3.7-py3-none-any.whl", hash = "sha256:9ff7c6cc443f8c51994b34a667bbcf45afd6d945be7477b52e97516fd17c53ac"},
+    {file = "nose-1.3.7.tar.gz", hash = "sha256:f1bffef9cbc82628f6e7d7b40d7e255aefaa1adb6a1b1d26c69a8b79e6208a98"},
 ]
 notebook = [
     {file = "notebook-6.4.0-py3-none-any.whl", hash = "sha256:f7f0a71a999c7967d9418272ae4c3378a220bd28330fbfb49860e46cf8a5838a"},
@@ -3345,9 +3412,6 @@ python-dateutil = [
     {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},
     {file = "python_dateutil-2.8.1-py2.py3-none-any.whl", hash = "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"},
 ]
-python-louvain = [
-    {file = "python-louvain-0.15.tar.gz", hash = "sha256:2a856edfbe29952a60a5538a84bb78cca18f6884a88b9325e85a11c8dd4917eb"},
-]
 pytz = [
     {file = "pytz-2021.1-py2.py3-none-any.whl", hash = "sha256:eb10ce3e7736052ed3623d49975ce333bcd712c7bb19a58b9e2089d4057d0798"},
     {file = "pytz-2021.1.tar.gz", hash = "sha256:83a4a90894bf38e243cf052c8b58f381bfe9a7a483f6a9cab140bc7f702ac4da"},
@@ -3639,6 +3703,25 @@ threadpoolctl = [
     {file = "threadpoolctl-2.1.0-py3-none-any.whl", hash = "sha256:38b74ca20ff3bb42caca8b00055111d74159ee95c4370882bbff2b93d24da725"},
     {file = "threadpoolctl-2.1.0.tar.gz", hash = "sha256:ddc57c96a38beb63db45d6c159b5ab07b6bced12c45a1f07b2b92f272aebfa6b"},
 ]
+tokenizers = [
+    {file = "tokenizers-0.10.3-cp36-cp36m-macosx_10_11_x86_64.whl", hash = "sha256:4ab688daf4692a6c31dfe42f1f3a4a8c22050705eb69d58d3efde9d55f434586"},
+    {file = "tokenizers-0.10.3-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:c26dbc3b2a3d71d3d40c50975ec62145932f05aea73f03ea35c48ebd3a717611"},
+    {file = "tokenizers-0.10.3-cp36-cp36m-win32.whl", hash = "sha256:6b84673997990b3c260ae2f7c57fdf1f835e316820eff14aca46dc68be3c0c74"},
+    {file = "tokenizers-0.10.3-cp36-cp36m-win_amd64.whl", hash = "sha256:2a9ee3ee574d4aa740e099b0ad6ef8e63f52f48cde359bb31801146a5aa614dc"},
+    {file = "tokenizers-0.10.3-cp37-cp37m-macosx_10_11_x86_64.whl", hash = "sha256:2f8c5fefef0d0a03be613547e613fbda06b9e6ee0891236649524964c3e54d80"},
+    {file = "tokenizers-0.10.3-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:4cc194104c8e427ffc4f54c7866488b42f2b1f6351a6cad0d045ca5ab8108e42"},
+    {file = "tokenizers-0.10.3-cp37-cp37m-win32.whl", hash = "sha256:edd8cb85c16b4b65e87ea5ef9d400be9fdd53c4152adbaca8817e16dd3aa480b"},
+    {file = "tokenizers-0.10.3-cp37-cp37m-win_amd64.whl", hash = "sha256:7b11b373705d082d43657c08883b79b5330f1952f0668d17488b6b889c4d7feb"},
+    {file = "tokenizers-0.10.3-cp38-cp38-macosx_10_11_x86_64.whl", hash = "sha256:a7ce0c2f27f7c92aa3f895231de90319acdf960ce2e42ba591edc651fda7d3c9"},
+    {file = "tokenizers-0.10.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:ae7e40d9c8a77c5a4109731ac3e21633b0c609c56a8b58be6b863da61fa54636"},
+    {file = "tokenizers-0.10.3-cp38-cp38-win32.whl", hash = "sha256:a7ce051aafc53c564c9edbc09df300c2bd4f6ce87460fc22a276fed405d1892a"},
+    {file = "tokenizers-0.10.3-cp38-cp38-win_amd64.whl", hash = "sha256:91a8c045980594c7c437a52c3da5276eb3c530a662b4ef628ff32d81fb22b543"},
+    {file = "tokenizers-0.10.3-cp39-cp39-macosx_10_11_x86_64.whl", hash = "sha256:1d8867db210d75d97312360ae23b92aeb6a6b5bc65e15c1cd9d204b3fa3fc262"},
+    {file = "tokenizers-0.10.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:18c495e700f4588b9a00e58b4c41dc459c36daaa7c39a27faf880eb8f5533ce1"},
+    {file = "tokenizers-0.10.3-cp39-cp39-win32.whl", hash = "sha256:ad700fd9da518884fd58bf89f0b6dfeecef9b4e2d2db8765ef259f66d6c14980"},
+    {file = "tokenizers-0.10.3-cp39-cp39-win_amd64.whl", hash = "sha256:e9d147e545cdfeca560646c7a703bf287afe45645da426506ccd5eb78aab5ef5"},
+    {file = "tokenizers-0.10.3.tar.gz", hash = "sha256:1a5d3b596c6d3a237e1ad7f46c472d467b0246be7fd1a364f12576eb8db8f7e6"},
+]
 torch = [
     {file = "torch-1.9.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:3a2d070cf28860d285d4ab156f3954c0c1d12f4c037aa312a7c029227c0d106b"},
     {file = "torch-1.9.0-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:b296e65e25081af147af936f1e3a1f17f583a9afacfa5309742678ffef728ace"},
@@ -3660,7 +3743,7 @@ torch = [
     {file = "torch-1.9.0-cp39-none-macosx_11_0_arm64.whl", hash = "sha256:569ead6ae6bb0e636df0fc8af660ef03260e630dc5f2f4cf3198027e7b6bb481"},
 ]
 torch-geometric = [
-    {file = "torch_geometric-1.7.2.tar.gz", hash = "sha256:a57b115cb3891c81d16960380e0bc4d842da2c96bea5ca019d6d139e6f026b31"},
+    {file = "torch_geometric-2.0.3.tar.gz", hash = "sha256:59c41993a0f6cc0e29efa6ca6274cc97bd6557e54bf7d3d38213933f821701c6"},
 ]
 torchdistill = [
     {file = "torchdistill-0.2.6-py3-none-any.whl", hash = "sha256:e057ccbbaaadf507f7a701a642fbe40d63acf86d1a34aa863f6f5e8d021052cd"},
@@ -3780,6 +3863,11 @@ wrapt = [
 xarray = [
     {file = "xarray-0.19.0-py3-none-any.whl", hash = "sha256:da0f0d7719b5ee95143a34804e3afb82cb8abbe5c10f9750a9dbed156ad30f00"},
     {file = "xarray-0.19.0.tar.gz", hash = "sha256:3a365ce09127fc841ba88baa63f37ca61376ffe389a6c5e66d52f2c88c23a62b"},
+]
+yacs = [
+    {file = "yacs-0.1.8-py2-none-any.whl", hash = "sha256:d43d1854c1ffc4634c5b349d1c1120f86f05c3a294c9d141134f282961ab5d94"},
+    {file = "yacs-0.1.8-py3-none-any.whl", hash = "sha256:99f893e30497a4b66842821bac316386f7bd5c4f47ad35c9073ef089aa33af32"},
+    {file = "yacs-0.1.8.tar.gz", hash = "sha256:efc4c732942b3103bea904ee89af98bcd27d01f0ac12d8d4d369f1e7a2914384"},
 ]
 zipp = [
     {file = "zipp-3.5.0-py3-none-any.whl", hash = "sha256:957cfda87797e389580cb8b9e3870841ca991e2125350677b2ca83a0e99390a3"},

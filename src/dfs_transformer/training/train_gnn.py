@@ -27,7 +27,7 @@ class WandbDummy():
 class TrainerGNN():
     #TODO: refactor such that this method takes an optimizer object instead of all these params...
     def __init__(self, model, loader, loss, validloader=None, metrics={}, 
-                 scorer=None, optimizer=torch.optim.Adam,
+                 scorer=None, optimizer=torch.optim.Adam, target='y',
                  n_epochs=1000, accumulate_grads=1, lr=0.0003, lr_patience=5, 
                  lr_adjustment_period=500, decay_factor=0.8, minimal_lr=6e-8, 
                  lr_argument = lambda log: log['loss'],
@@ -46,7 +46,7 @@ class TrainerGNN():
             self.wandb = WandbDummy()
         else:
             self.wandb = wandb_run 
-        
+        self.target = target
         self.model = model
         self.loader = loader
         self.validloader = validloader
@@ -116,7 +116,7 @@ class TrainerGNN():
                         optim.zero_grad()
                     data = data.cuda()
                     pred = self.model(data.x, data.edge_index, data.batch)
-                    loss = self.loss(pred, data.y)
+                    loss = self.loss(pred, data[self.target])
                     loss.backward()
                     if (step+1) % self.accumulate_grads == 0:
                         if self.clip_gradient_norm is not None:
@@ -130,7 +130,7 @@ class TrainerGNN():
                     self.model.eval()
                     with torch.no_grad():
                         for name, metric in self.metrics.items():
-                            res = metric(pred, data.y)
+                            res = metric(pred, data[self.target])
                             epoch_metric[name] = (epoch_metric[name]*i + res.item())/(i+1)
                             log['batch-'+name] = res.item()
                             log[name] = epoch_metric[name]
@@ -168,12 +168,12 @@ class TrainerGNN():
                                     valid_log = {}
                                     data = data.cuda()
                                     pred = self.model(data.x, data.edge_index, data.batch)
-                                    loss = self.loss(pred, data.y)
+                                    loss = self.loss(pred, data[self.target])
                                     valid_loss = (valid_loss*i + loss.item())/(i+1)
                                     valid_log['valid-loss'] = valid_loss
                                     pbar_string = "Valid %d: loss %2.6f"%(epoch+1, valid_loss)
                                     for name, metric in self.metrics.items():
-                                        res = metric(pred, data.y)
+                                        res = metric(pred, data[self.target])
                                         valid_metric[name] = (valid_metric[name]*i + res.item())/(i+1)
                                         valid_log['valid-'+name] = valid_metric[name]
                                         pbar_string += " %2.4f"%res.item()
