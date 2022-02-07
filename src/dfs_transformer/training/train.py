@@ -35,7 +35,7 @@ class Trainer():
                  gpu_id=0, es_improvement=0.0, 
                  es_patience=100, es_path=None, es_period=1000, wandb_run = None, 
                  adam_betas=(0.9,0.98), adam_eps=1e-9, param_groups=None,
-                 clip_gradient_norm=0.5, **kwargs):
+                 clip_gradient_norm=0.5, device=None, **kwargs):
         """
         data = next(iter(loader)),
         loss and metrics will be computed on model(data[:-1]), data[-1] 
@@ -62,7 +62,9 @@ class Trainer():
         self.minimal_lr = minimal_lr
         self.clip_gradient_norm = clip_gradient_norm
         self.gpu_id = gpu_id
-        if self.gpu_id is not None:
+        if device is not None:
+            self.device = device
+        elif self.gpu_id is not None:
             self.device = torch.device('cuda:%d'%self.gpu_id if torch.cuda.is_available() else 'cpu')
         else:
             self.device = 'cpu'

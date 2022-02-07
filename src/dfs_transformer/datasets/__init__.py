@@ -4,3 +4,4 @@ from .mymoleculenet import *
 from .ogbn_mag import *
 from .enzymes import *
 from .qm9 import *
+from .karateclub import *
