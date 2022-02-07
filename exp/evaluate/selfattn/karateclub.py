@@ -142,7 +142,7 @@ parser.add_argument('--label_file', type=str, default="/mnt/ssd/datasets/graphs/
 parser.add_argument('--model_yaml', type=str, default="./config/selfattn/model/bert.yaml")
 parser.add_argument('--nonlinear', action='store_true')
 parser.add_argument('--batch_size', type=int, default=50)
-parser.add_argument('--n_epochs', type=int, default=1)
+parser.add_argument('--n_epochs', type=int, default=10)
 parser.add_argument('--learning_rate', type=float, default=5*1e-5)
 parser.add_argument('--clip_gradient_norm', type=float, default=0.5)
 parser.add_argument('--n_repetitions', type=int, default=100)
