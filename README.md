@@ -67,13 +67,9 @@ https://scicomp.ethz.ch/wiki/Python_on_Euler#python_gpu.2F3.8.5_2
 ```bash
 poetry install
 poetry shell
-pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.10.2+cu113.html
-pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.10.2+cu113.html
-pip install torch-geometric
-pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.10.2+cu113.html
-pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.10.2+cu113.html
+pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu111.html
 
-pip install dgl-cu113 -f https://data.dgl.ai/wheels/repo.html
+pip install dgl-cu111 -f https://data.dgl.ai/wheels/repo.html
 
 git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
 cd dfs-code-representation
