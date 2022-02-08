@@ -141,7 +141,7 @@ parser.add_argument('--graph_file', type=str, default="/mnt/ssd/datasets/graphs/
 parser.add_argument('--label_file', type=str, default="/mnt/ssd/datasets/graphs/reddit_threads/reddit_target.csv")
 parser.add_argument('--model_yaml', type=str, default="./config/selfattn/model/bert.yaml")
 parser.add_argument('--nonlinear', action='store_true')
-parser.add_argument('--batch_size', type=int, default=50)
+parser.add_argument('--batch_size', type=int, default=200)
 parser.add_argument('--n_epochs', type=int, default=10)
 parser.add_argument('--learning_rate', type=float, default=5*1e-5)
 parser.add_argument('--clip_gradient_norm', type=float, default=0.5)
@@ -213,7 +213,7 @@ for key,value in args.overwrite.items():
 
 
 run = wandb.init(mode=args.wandb_mode, project=args.wandb_project, entity=args.wandb_entity, 
-                 config=config, job_type="evaluation", name=args.name)
+                 config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"))
 
 device = torch.device(config.device)
 to_cuda = functools.partial(to_cuda_, device=device)

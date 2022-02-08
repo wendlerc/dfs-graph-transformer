@@ -7,7 +7,6 @@ Created on Thu Feb  3 13:36:51 2022
 """
 
 from torch_geometric.data import Data, Dataset
-from torch_geometric.loader import DataLoader
 import torch
 import tqdm
 import networkx as nx
