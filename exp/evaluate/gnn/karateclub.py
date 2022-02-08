@@ -93,7 +93,7 @@ config.training = {}
 config.pretrain_flag = args.pretrain_flag
 
 run = wandb.init(mode=args.wandb_mode, project=args.wandb_project, entity=args.wandb_entity, 
-                 config=config, job_type="evaluation", name=args.name)
+                 config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"))
 
 dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges)
 dim_input = dataset[0].x.shape[1]
