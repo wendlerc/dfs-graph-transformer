@@ -106,6 +106,8 @@ git checkout vertexids
 pip install . 
 ```
 
+dgl was not found so I did another pip install dgl -.-.
+
 
 
 
