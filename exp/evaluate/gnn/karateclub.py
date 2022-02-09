@@ -51,6 +51,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
 parser.add_argument('--wandb_project', type=str, default="karateclub-rep100")
 parser.add_argument('--wandb_mode', type=str, default="online")
+parser.add_argument('--wandb_group', type=str, default=None)
 parser.add_argument('--wandb_dir', type=str, default="./wandb")
 parser.add_argument('--name', type=str, default=None)
 parser.add_argument('--graph_file', type=str, default="/mnt/ssd/datasets/graphs/reddit_threads/reddit_edges.json")
@@ -97,7 +98,8 @@ config.training = {}
 config.pretrain_flag = args.pretrain_flag
 
 run = wandb.init(mode=args.wandb_mode, project=args.wandb_project, entity=args.wandb_entity, 
-                 config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"))
+                 config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"),
+                 group=args.wandb_group)
 
 dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges)
 dim_input = dataset[0].x.shape[1]
