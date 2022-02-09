@@ -2,7 +2,7 @@
 bold means important, stuff that people are working on contains names
 
 ### Show that the new representation can solve an actual problem
-- [ ] show that DFS codes work well on other types of graphs 
+- [x] show that DFS codes work well on other types of graphs 
 - [x] try ogb-mag node prediction task 
 
 ### Evaluate the following baselines on our moleculenet splits
@@ -59,7 +59,7 @@ Cluster
 This needs to be active.
 ```bash
 env2lmod
-module load gcc/8.2.0 python_gpu/3.9.9
+module load gcc/8.2.0 python_gpu/3.8.5 # python_gpu/3.9.9 really caused only trouble ...
 module load eth_proxy
 ```
 This python comes with support for torch 1.10.0+cu113 and torch-geometric 2.0.3, for some reason the poetry always installs 1.9. (maybe fix this...)
@@ -76,6 +76,21 @@ cd dfs-code-representation
 git checkout vertexids
 pip install . 
 ```
+Actually the above resulted in different cuda versions for torch and torch-geometric. So now I am using:
+```bash
+poetry install
+poetry shell
+pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu102.html
+
+pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html
+
+git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
+cd dfs-code-representation
+git checkout vertexids
+pip install . 
+```
+
+
 
 Examples:
 
