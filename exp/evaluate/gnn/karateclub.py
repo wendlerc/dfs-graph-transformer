@@ -69,6 +69,8 @@ parser.add_argument('--readout', type=str, default="tnn.global_mean_pool")
 parser.add_argument('--num_workers', type=int, default=5)
 parser.add_argument('--pretrain_flag', action='store_true')
 parser.add_argument('--seed', type=int, default=42)
+parser.add_argument('--start', type=int, default=0)
+parser.add_argument('--end', type=int, default=100)
 args = parser.parse_args()
 
 config = wandb.config
@@ -79,7 +81,9 @@ config.label_file = args.label_file
 config.batch_size = args.batch_size
 config.n_epochs = args.n_epochs
 config.learning_rate = args.learning_rate
-config.n_repetitions = args.n_repetitions
+config.n_repetitions = max(args.n_repetitions, args.end)
+config.start = args.start
+config.end = args.end
 config.rep = args.rep
 config.max_edges = args.max_edges
 config.n_samples = args.n_samples
@@ -106,7 +110,7 @@ n_valid = 0
 n_test = n - n_train - n_valid
 perms = [np.random.permutation(n) for _ in range(config.n_repetitions)]
 scores = defaultdict(list)
-for perm in perms:
+for perm in perms[config.start:config.end]:
     train_idx = torch.tensor(perm[:n_train], dtype=torch.long)
     valid_idx = torch.tensor(perm[n_train:n_train+n_valid].tolist(), dtype=torch.long)
     test_idx = torch.tensor(perm[n_train+n_valid:].tolist(), dtype=torch.long)

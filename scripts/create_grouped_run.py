@@ -4,6 +4,15 @@
 Created on Wed Feb  9 17:11:12 2022
 
 @author: chrisw
+
+usage example:
+    
+    python scripts/create_grouped_run.py pretrained_transformer_twitch 
+    --command 'python exp/evaluate/selfattn/karateclub.py 
+    --graph_file graphs/twitch_egos/twitch_edges.json 
+    --label_file graphs/twitch_egos/twitch_target.csv 
+    --pretrain_flag' --stepsize 4 > scripts/start_pretrained_transformer_twitch.sh
+
 """
 
 import argparse
@@ -34,13 +43,13 @@ for i in range(args.start, args.end, args.stepsize):
     print('bsub -G %s -o %s -n %d -W %s -R ' \
           '"rusage[mem=%d, ngpus_excl_p=%d]" -R "select[gpu_mtotal0>=%d]" '\
           '%s --start %d --end %d --wandb_group %s'%(args.share,
-                                    args.logdir,
-                                    args.n_cpus,
-                                    args.time,
-                                    args.cpu_memory,
-                                    args.n_gpus, 
-                                    args.gpu_memory,
-                                    args.command, 
-                                    i, i+args.stepsize,
-                                    args.wandb_group))
+                                                    args.logdir,
+                                                    args.n_cpus,
+                                                    args.time,
+                                                    args.cpu_memory,
+                                                    args.n_gpus, 
+                                                    args.gpu_memory,
+                                                    args.command, 
+                                                    i, i+args.stepsize,
+                                                    args.wandb_group))
     
