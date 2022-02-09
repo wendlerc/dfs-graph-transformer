@@ -136,6 +136,7 @@ parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
 parser.add_argument('--wandb_project', type=str, default="karateclub-rep100")
 parser.add_argument('--wandb_mode', type=str, default="online")
 parser.add_argument('--wandb_dir', type=str, default="./wandb")
+parser.add_argument('--wandb_group', type=str, default=None)
 parser.add_argument('--name', type=str, default=None)
 parser.add_argument('--graph_file', type=str, default="./graphs/reddit_threads/reddit_edges.json")
 parser.add_argument('--label_file', type=str, default="./graphs/reddit_threads/reddit_target.csv")
@@ -146,6 +147,8 @@ parser.add_argument('--n_epochs', type=int, default=10)
 parser.add_argument('--learning_rate', type=float, default=5*1e-5)
 parser.add_argument('--clip_gradient_norm', type=float, default=0.5)
 parser.add_argument('--n_repetitions', type=int, default=100)
+parser.add_argument('--start', type=int, default=0)
+parser.add_argument('--end', type=int, default=100)
 parser.add_argument('--rep', type=int, default=1)
 parser.add_argument('--max_edges', type=int, default=200)
 parser.add_argument('--n_samples', type=int, default=None)
@@ -157,6 +160,7 @@ parser.add_argument('--device', type=str, default='cuda:0')
 parser.add_argument('--use_min', action='store_true')
 args = parser.parse_args()
 
+
 config = wandb.config
 config.graph_file = args.graph_file
 config.label_file = args.label_file
@@ -166,6 +170,8 @@ config.batch_size = args.batch_size
 config.n_epochs = args.n_epochs
 config.learning_rate = args.learning_rate
 config.n_repetitions = args.n_repetitions
+config.start = args.start
+config.end = args.end
 config.rep = args.rep
 config.max_edges = args.max_edges
 config.n_samples = args.n_samples
@@ -213,7 +219,8 @@ for key,value in args.overwrite.items():
 
 
 run = wandb.init(mode=args.wandb_mode, project=args.wandb_project, entity=args.wandb_entity, 
-                 config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"))
+                 config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"),
+                 group=args.wandb_group)
 
 device = torch.device(config.device)
 to_cuda = functools.partial(to_cuda_, device=device)
@@ -226,7 +233,7 @@ n_valid = 0
 n_test = n - n_train - n_valid
 perms = [np.random.permutation(n) for _ in range(config.n_repetitions)]
 scores = defaultdict(list)
-for perm in perms:
+for perm in perms[config.start:config.end]:
     train_idx = torch.tensor(perm[:n_train], dtype=torch.long)
     valid_idx = torch.tensor(perm[n_train:n_train+n_valid].tolist(), dtype=torch.long)
     test_idx = torch.tensor(perm[n_train+n_valid:].tolist(), dtype=torch.long)
