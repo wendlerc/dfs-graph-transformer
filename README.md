@@ -89,6 +89,23 @@ cd dfs-code-representation
 git checkout vertexids
 pip install . 
 ```
+Okay, the above has the problem that the CUDA 10.2 binaries are not on the cluster when those modules are loaded... So now this is hopefully finally the solution:
+
+```bash
+poetry install
+poetry shell
+pip uninstall torch
+pip install torch==1.9.0 torchvision==0.10.0 torchaudio==0.9.0 -f https://download.pytorch.org/whl/cu111/torch_stable.html
+pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu111.html
+
+pip install dgl-cu111 -f https://data.dgl.ai/wheels/repo.html
+
+git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
+cd dfs-code-representation
+git checkout vertexids
+pip install . 
+```
+
 
 
 
