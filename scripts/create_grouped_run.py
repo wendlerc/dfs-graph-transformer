@@ -33,7 +33,7 @@ assert (args.end - args.start) % args.stepsize == 0
 for i in range(args.start, args.end, args.stepsize):
     print('bsub -G %s -o %s -n %d -W %s -R ' \
           '"rusage[mem=%d, ngpus_excl_p=%d]" -R "select[gpu_mtotal0>=%d]" '\
-          '%s --start %d --end %d'%(args.share,
+          '%s --start %d --end %d --wandb_group %s'%(args.share,
                                     args.logdir,
                                     args.n_cpus,
                                     args.time,
@@ -41,5 +41,6 @@ for i in range(args.start, args.end, args.stepsize):
                                     args.n_gpus, 
                                     args.gpu_memory,
                                     args.command, 
-                                    i, i+args.stepsize))
+                                    i, i+args.stepsize,
+                                    args.wandb_group))
     
