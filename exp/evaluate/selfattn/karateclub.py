@@ -154,6 +154,7 @@ parser.add_argument('--max_edges', type=int, default=200)
 parser.add_argument('--n_samples', type=int, default=None)
 parser.add_argument('--num_workers', type=int, default=5)
 parser.add_argument('--pretrain_flag', action='store_true')
+parser.add_argument('--only_deg_flag', action='store_true')
 parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--overwrite', type=json.loads, default="{}")
 parser.add_argument('--device', type=str, default='cuda:0')
@@ -183,9 +184,14 @@ config.num_workers = args.num_workers
 config.seed = args.seed
 config.training = {}
 config.pretrain_flag = args.pretrain_flag
+config.only_deg_flag = args.only_deg_flag
 config.device=args.device
 
-dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges)
+if config.only_deg_flag:
+    dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges,
+                                features=['deg'])
+else:
+    dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges)
 
 with open(args.model_yaml) as file:
     m = ConfigDict(yaml.load(file, Loader=yaml.FullLoader))
