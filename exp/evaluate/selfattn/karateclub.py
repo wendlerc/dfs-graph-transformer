@@ -6,6 +6,8 @@ Created on Fri Feb  4 19:02:08 2022
 @author: chrisw
 """
 
+print('starting imports...')
+
 import json
 import numpy as np
 import glob
@@ -133,7 +135,7 @@ def auc(pred, y):
     
 parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
-parser.add_argument('--wandb_project', type=str, default="karateclub-rep100")
+parser.add_argument('--wandb_project', type=str, default="karateclub-grouped2-rep100")
 parser.add_argument('--wandb_mode', type=str, default="online")
 parser.add_argument('--wandb_dir', type=str, default="./wandb")
 parser.add_argument('--wandb_group', type=str, default=None)
@@ -152,7 +154,7 @@ parser.add_argument('--end', type=int, default=100)
 parser.add_argument('--rep', type=int, default=1)
 parser.add_argument('--max_edges', type=int, default=200)
 parser.add_argument('--n_samples', type=int, default=None)
-parser.add_argument('--num_workers', type=int, default=5)
+parser.add_argument('--num_workers', type=int, default=0)
 parser.add_argument('--pretrain_flag', action='store_true')
 parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--overwrite', type=json.loads, default="{}")
@@ -160,7 +162,7 @@ parser.add_argument('--device', type=str, default='cuda:0')
 parser.add_argument('--use_min', action='store_true')
 args = parser.parse_args()
 
-
+print('creating wandb config object')
 config = wandb.config
 config.graph_file = args.graph_file
 config.label_file = args.label_file
@@ -185,6 +187,7 @@ config.training = {}
 config.pretrain_flag = args.pretrain_flag
 config.device=args.device
 
+print('loading dataset...')
 dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges)
 
 with open(args.model_yaml) as file:
@@ -217,11 +220,11 @@ for key,value in args.overwrite.items():
     else:
         config[key] = value
 
-
+print('creating wandb run...')
 run = wandb.init(mode=args.wandb_mode, project=args.wandb_project, entity=args.wandb_entity, 
                  config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"),
                  group=args.wandb_group)
-
+print('starting experiment...')
 device = torch.device(config.device)
 to_cuda = functools.partial(to_cuda_, device=device)
 
