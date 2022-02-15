@@ -69,6 +69,7 @@ parser.add_argument('--model', type=str, default="tnn.models.GCN")
 parser.add_argument('--readout', type=str, default="tnn.global_mean_pool")
 parser.add_argument('--num_workers', type=int, default=0)
 parser.add_argument('--pretrain_flag', action='store_true')
+parser.add_argument('--only_deg_flag', action='store_true')
 parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--start', type=int, default=0)
 parser.add_argument('--end', type=int, default=100)
@@ -96,12 +97,19 @@ config.readout = args.readout
 config.seed = args.seed
 config.training = {}
 config.pretrain_flag = args.pretrain_flag
+config.only_deg_flag = args.only_deg_flag
 
 run = wandb.init(mode=args.wandb_mode, project=args.wandb_project, entity=args.wandb_entity, 
                  config=config, job_type="evaluation", name=args.name, settings=wandb.Settings(start_method="fork"),
                  group=args.wandb_group)
 
-dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges)
+
+if config.only_deg_flag:
+    dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges,
+                                features=['deg'])
+else:
+    dataset = KarateClubDataset(config.graph_file, config.label_file, max_n=config.n_samples, max_edges=config.max_edges)
+
 dim_input = dataset[0].x.shape[1]
 
 
