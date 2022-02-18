@@ -241,7 +241,7 @@ def BERTize(codes, fraction_missing=0.15, fraction_mask=0.8, fraction_rand=0.1, 
     return inputs, targets, masks_input, masks_target
 
 
-def collate_BERT(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False, window=[-2, -1, 0, 1, 2]):
+def collate_BERT(dlist, mode="rnd2rnd", fraction_missing=0.15, use_loops=False, window=[0]): # window [-1, 0, 1] can be used to delete chunks
         node_batch = [] 
         edge_batch = []
         code_batch = []
