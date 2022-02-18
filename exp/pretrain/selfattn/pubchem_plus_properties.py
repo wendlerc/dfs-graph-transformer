@@ -78,6 +78,7 @@ if __name__ == "__main__":
                      entity=args.wandb_entity, 
                      name=args.name, config=config.to_dict(), settings=wandb.Settings(start_method='fork'))
     
+    
     m = deepcopy(config.model)
     t = deepcopy(config.training)
     d = deepcopy(config.data)
@@ -140,15 +141,19 @@ if __name__ == "__main__":
         loss = lambda preds, outputs: loss_old_wrapped(preds, outputs) + property_loss(preds, outputs)
     
     if config.training.mode == "min2min":
+        window = [i for i in range(-config.training.window_offset, config.training.window_offset+1)]
         collate_fn = functools.partial(collate_BERT, 
                                        mode="min2min", 
                                        fraction_missing = config.training.fraction_missing,
-                                       use_loops=m.use_loops)
+                                       use_loops=m.use_loops,
+                                       window=window)
     elif config.training.mode == "rnd2rnd":
+        window = [i for i in range(-config.training.window_offset, config.training.window_offset+1)]
         collate_fn = functools.partial(collate_BERT, 
                                        mode="rnd2rnd", 
                                        fraction_missing = config.training.fraction_missing,
-                                       use_loops=m.use_loops)
+                                       use_loops=m.use_loops,
+                                       window=window)
     elif config.training.mode == "rnd2min":
         raise NotImplemented("implementation not updated yet...")
         collate_fn = functools.partial(collate_rnd2min,

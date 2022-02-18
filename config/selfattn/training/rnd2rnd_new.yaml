@@ -19,6 +19,8 @@ load_last: True
 num_workers: 4
 prefetch_factor: 2
 pin_memory: True
+window_offset: 0 # if bert deletes i it also deletes [i-window_offset, ..., i+window_offset]
+
 
     
 

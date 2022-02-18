@@ -6,9 +6,9 @@ lr_warmup: 10000 #bert paper
 lr_decay_type: "linear" # this correspodns to linear decay
 lr_total_steps: 117187 #  in bert paper has 1e6, adjusted to this dataset it would be 117187 # (1e6 / 256)*30 
 weight_decay: 0.01 # bert paper
-n_epochs: 1
+n_epochs: 30
 minimal_lr: 0.00000006
-batch_size: 256 #bert paper
+batch_size: 100 #256 #bert paper
 accumulate_grads: 1 #bert paper
 gpu_id: 0
 es_patience: 100
@@ -19,6 +19,7 @@ load_last: True
 num_workers: 4
 prefetch_factor: 2
 pin_memory: True
+window_offset: 0 # if bert deletes i it also deletes [i-window_offset, ..., i+window_offset]
 
     
     
