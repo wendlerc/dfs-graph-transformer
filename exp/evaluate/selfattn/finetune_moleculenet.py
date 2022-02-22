@@ -186,7 +186,7 @@ if __name__ == "__main__":
         
         
     if "use_min" not in args.overwrite.keys() and pretrained_cfg is not None:
-        if pretrained_cfg.model in ["min2min"]:
+        if pretrained_cfg.training.mode in ["min2min"]:
             config["use_min"] = True
         else:
             config["use_min"] = False

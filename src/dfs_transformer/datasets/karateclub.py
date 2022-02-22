@@ -16,6 +16,7 @@ import torch.nn.functional as F
 import json
 import pandas as pd
 from joblib import Parallel, delayed
+import dfs_code
 
 
 def graph2labelledgraph(graph, use_dummy=False, use_degree=True):
@@ -49,7 +50,7 @@ def graph2labelledgraph(graph, use_dummy=False, use_degree=True):
 
 class KarateClubDataset(Dataset):
     def __init__(self, graph_file, label_file, max_n = None, max_edges=np.inf, 
-                 features=['deg', 'triangles', 'eccentricity'], n_jobs=-2):
+                 features=['deg', 'triangles', 'eccentricity'], min_dfs_flag=False):
         super().__init__()
         self.graph_file = graph_file
         self.label_file = label_file
@@ -60,8 +61,8 @@ class KarateClubDataset(Dataset):
         self.maxn = max_n
         self.max_edges = max_edges
         self.features = features
-        self.n_jobs = n_jobs
         self.nystroem = np.load('/'.join(graph_file.split('/')[:-1])+'/wl_nystroem.npy')
+        self.min_dfs_flag = min_dfs_flag
         self.preprocess()
     
     def preprocess(self):
@@ -116,6 +117,34 @@ class KarateClubDataset(Dataset):
                 node_features = torch.cat(feats, dim=1)
             
             edge_features = F.one_hot(torch.tensor(elabels), num_classes=2).float()
+            if self.min_dfs_flag:
+                #vlabels = eccentricity.numpy().tolist()
+                #vlabels = clustering_coefs.numpy().tolist()
+                vlabels2 = []
+                for deg, n_tri, ecc in zip(vlabels, clustering_coefs, eccentricity):
+                    vlabels2 += [deg.item()]# + self.max_edges*n_tri.item() + self.max_edges**2*ecc.item()]
+                
+                elabels2 = [vlabels[edge[0]]+vlabels[edge[1]] - 2 for edge in edgeindex.T]
+                #elabels2 = elabels
+                #print(len(elabels2), edgeindex.shape)
+                print(edgeindex)
+                print(vlabels2)
+                print(elabels2)
+                code, index = dfs_code.min_dfs_code_from_edgeindex(edgeindex, vlabels2, elabels2)
+                print(code)
+                print(len(code))
+                return Data(**{"edge_index": torch.tensor(edgeindex, dtype=torch.long),
+                           "edge_features": edge_features,
+                           "node_features": node_features,
+                           "node_labels": torch.tensor(vlabels, dtype=torch.long),
+                           "edge_labels": torch.tensor(elabels, dtype=torch.long),
+                           "x": node_features, 
+                           "y": torch.tensor(label, dtype=torch.long),
+                           "nystroem": torch.tensor(vec, dtype=torch.float32).unsqueeze(0),
+                           "num_nodes": len(node_features),
+                           "min_dfs_code": torch.tensor(np.asarray(code)),
+                           "min_dfs_index": torch.tensor(np.asarray(index), dtype=torch.long)})
+            
             return Data(**{"edge_index": torch.tensor(edgeindex, dtype=torch.long),
                            "edge_features": edge_features,
                            "node_features": node_features,
