@@ -1,2 +1,0 @@
-model = DFSCodeSeq2SeqFC(n_atoms=118, n_bonds=4, emb_dim=50, nhead=5, nlayers=6, max_nodes=100, max_edges=400,
-                         atom_encoder=nn.Embedding(118, 50), bond_encoder=nn.Linear(4, 50))

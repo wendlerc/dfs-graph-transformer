@@ -14,8 +14,7 @@ import pandas as pd
 import sys
 from sklearn.metrics import roc_auc_score, average_precision_score
 sys.path = ['./src'] + sys.path
-from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_downstream, \
-DFSCodeSeq2SeqFCFeatures, TransformerPlusHeads
+from dfs_transformer import EarlyStopping, DFSCodeSeq2SeqFC, Deepchem2TorchGeometric, FeaturesDataset, collate_downstream, TransformerPlusHeads
 from dfs_transformer import to_cuda as to_cuda_
 import argparse
 import yaml

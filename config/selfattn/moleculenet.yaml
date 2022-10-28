@@ -1,5 +1,6 @@
 data_dir_pattern: "./datasets/mymoleculenet/%s/"
-load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
+#load_dir_pattern: "./results/mymoleculenet_plus_features/%s/1/"
+load_dir_pattern: "/home/chrisw/Documents/projects/2021/graph-transformer-feature-dataloader/results/mymoleculenet_plus_features/%s/1/"
 model_dir_pattern: "./models/tmp/%s/"
 n_hidden: 0
 lr_head: 0.003
@@ -14,7 +15,7 @@ gpu_id: 0
 es_patience: 10
 es_improvement: 0.0
 pretrained_class: 'DFSCodeSeq2SeqFC'
-pretrained_project: 'pubchem_newdataloader'
+pretrained_project: 'pubchem_newencoding'
 pretrained_entity: 'dfstransformer'
 pretrained_model: 'r2r-newloader' #rand2min-1M'
 pretrained_yaml: './config/selfattn/model/bert.yaml' # yaml to fall back to in case there is none in wandb artifact

@@ -1,120 +1,92 @@
-# TODO: 
-bold means important, stuff that people are working on contains names
+# Graph transformers based on depth first search codes
 
-### Show that the new representation can solve an actual problem
-- [x] show that DFS codes work well on other types of graphs 
-- [x] try ogb-mag node prediction task 
+We represent graphs as sequences of edges (so called DFS codes) and process them using transformers.
+DFS codes correspond to depth first search (DFS) traversals of graphs. In particular, they record edges 
+in the order in which they are encoundered using DFS. By defining a total order on the space of all such 
+sequences it is possible to associate graphs with minimal DFS codes which are unique up to graph isomorphy.
+That is, isomorphic graphs have the same minimal DFS codes. 
 
-### Evaluate the following baselines on our moleculenet splits
-- [x] DMPNN
-- [ ] **GROVER**, [git](https://github.com/tencent-ailab/grover) [paper](https://arxiv.org/abs/2007.02835)
-- [x] Hugo **ChemBERTa**, [git](https://github.com/seyonechithrananda/bert-loves-chemistry) [paper](https://arxiv.org/abs/2010.09885) [huggingface](https://huggingface.co/seyonec/ChemBERTa-zinc-base-v1)
-- [x] Hugo SMILES transformer, [git](https://github.com/DSPsleeporg/smiles-transformer) [paper](https://arxiv.org/abs/1911.04738)
+For very symmetrical molecules the computation of the minimal DFS codes can become extremely slow. 
+In our preprocessing scripts we omitted those.
 
-#### general 
-- [x] implement a better metric than accuracy to assess the quality of the fit of the pretraining 
-#### improve the results
-- [x] Chris **implement a version that utilizes self-loops**
-- [ ] make larger model converge, ADAM beta2=0.95
-- [x] check whether having multiple cls tokens is helpful
-- [x] tweak the way the gradients are propagated through the cls token 
-- [x] add a term to the pretraining objective that depends on the features  
-- [ ] a transformer decoder that has the hidden states of a GNN as memory
-#### pretraining 
-- [x] Chris **write cluster ready pretraining script**
-- [x] Chris **write cluster ready finetuning script** 
-- [ ] **find good hyperparameters**  
-- [ ] investigate the behavior when the pretraining dataset size is increased
+# Project structure
 
+### Code structure
+```
+.
+├── config <-- main directory
+├── datasets
+├── preprocessed
+├── exp
+└── src
 
-# Installation:
+```
+
+# Installation
 
 ```bash
 poetry install
 poetry shell
-pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.9.0+cu102.html
-pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.9.0+cu102.html
-pip install torch-geometric
-pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.9.0+cu102.html
-pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.9.0+cu102.html
-
+pip install torch-scatter torch-sparse torch-cluster torch-spline-conv -f https://data.pyg.org/whl/torch-1.12.1+cu102.html
 pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html
 
-git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
+git clone git@github.com:ElizaWszola/dfs-code-representation.git
 cd dfs-code-representation
 git checkout vertexids
 pip install . 
 ```
 
-Baseline:
-
+# Baselines
 ```bash
 pip install git+https://github.com/bp-kelley/descriptastorus
-
 pip install chemprop
 ```
 
-Cluster 
+# Example usage
 
-This needs to be active.
-```bash
-env2lmod
-module load gcc/8.2.0 python_gpu/3.8.5 # python_gpu/3.9.9 really caused only trouble ...
-module load eth_proxy
-```
-This python comes with support for torch 1.10.0+cu113 and torch-geometric 2.0.3, for some reason the poetry always installs 1.9. (maybe fix this...)
-https://scicomp.ethz.ch/wiki/Python_on_Euler#python_gpu.2F3.8.5_2
-```bash
-poetry install
-poetry shell
-pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu111.html
+All scripts are parametrized by config files and command line arguments. Please consult the respective files for more details. Scripts for running
+experiments are in ./exp and configuration files are in ./config. 
 
-pip install dgl-cu111 -f https://data.dgl.ai/wheels/repo.html
+# Molecular data
 
-git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
-cd dfs-code-representation
-git checkout vertexids
-pip install . 
-```
-Actually the above resulted in different cuda versions for torch and torch-geometric. So now I am using:
-```bash
-poetry install
-poetry shell
-pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu102.html
+## Pretraining
 
-pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html
+For the pretraining to work, make sure to download ... and update the config files in ./config/selfattn/data accordingly. 
 
-git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
-cd dfs-code-representation
-git checkout vertexids
-pip install . 
-```
-Okay, the above has the problem that the CUDA 10.2 binaries are not on the cluster when those modules are loaded... So now this is hopefully finally the solution:
+The parametrization of the training loop in the pretraining script is a bit unconventional. This is because the pretraining dataset with 10 million 
+molecules (not provided) does not fit into memory on my machines. I store large datasets by splitting them into several parts of equal size (number of molecules). 
+Then in the outer loop that does n_epochs repetitions a subset of the splits is complsed into a torch dataset. The inner loop then performs n_iter_per_split 
+passes over this dataset and so on. If all splits fit into memory I recommend using n_epochs=1 and n_iter_per_split=<desired_number_of_epochs>, e.g., 
+n_iter_per_split=10. If at least es_period (default=1000) batches have been processed the final checkpoint is uploaded as a wandb artifact for later use.
+Please make sure to set --wandb_entity, --wandb_project accordingly. --overwrite is used to overwrite parameters that are set via config files.
 
 ```bash
-poetry install
-poetry shell
-pip uninstall torch
-pip install torch==1.9.0 torchvision==0.10.0 torchaudio==0.9.0 -f https://download.pytorch.org/whl/cu111/torch_stable.html
-pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu111.html
-
-pip install dgl-cu111 -f https://data.dgl.ai/wheels/repo.html
-
-git clone git@gitlab.inf.ethz.ch:ewszola/dfs-code-representation.git
-cd dfs-code-representation
-git checkout vertexids
-pip install . 
+python exp/pretrain/selfattn/pubchem_plus_properties.py --wandb_entity dfstransformer --wandb_project pubchem_pretrain --name bert-10K --yaml_data './config/selfattn/data/pubchem10K.yaml' --overwrite '{"training" : {"n_epochs" : 1}, "data" : {"n_iter_per_split" : 10}}'
 ```
 
-dgl was not found so I did another pip install dgl -.-.
+## Evaluation
 
+For the evaluation to work, make sure to download ... and update ./config/selfattn/finetune_moleculenet.yaml accordingly.
 
+### Use pretrained features 
 
-
-Examples:
-
-Overwrite run parameters example:
+The evaluation script is parametrized by the config file ./config/selfattn/moleculenet.yaml.
 
 ```bash
-python exp/pretrain/selfattn/pubchem.py --name bert-10K --wandb_mode offline --overwrite '{"training" : {"n_epochs" : 1}, "data" : {"n_iter_per_split" : 2}}'
+python exp/evaluate/selfattn/moleculenet_plus_properties.py --wandb_entity dfstransformer --wandb_project moleculenet_eval --overwrite '{"pretrained_model":"r2r-30"}'
 ```
+
+### Finetune
+
+The finetuning script is parametrized by the config file ./config/finetune_moleculenet.yaml. Importantly, this file points to the wandb project containing the pretrained models.
+The pretrained model is then selected by setting pretrained_model to the name of the run containing the checkpoint artifact. 
+
+```bash
+python exp/evaluate/selfattn/finetune_moleculenet.py --wandb_entity dfstransformer --wandb_project moleculenet_finetune --overwrite '{"pretrained_model":"r2r-30"}'
+
+```
+
+# Other graphs
+
+
+

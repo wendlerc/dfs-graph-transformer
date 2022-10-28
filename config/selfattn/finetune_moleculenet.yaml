@@ -1,6 +1,7 @@
 data_dir_pattern: "./datasets/mymoleculenet/%s/"
+load_dir_pattern: "/home/chrisw/Documents/projects/2021/graph-transformer-feature-dataloader/results/mymoleculenet_plus_features/%s/1/"
 #load_dir_pattern: "/cluster/work/pueschel/mymoleculenet_plus_features/%s/1/"
-load_dir_pattern: "../mymoleculenet_plus_features/%s/1/"
+#load_dir_pattern: "../mymoleculenet_plus_features/%s/1/"
 #model_dir_pattern: "/cluster/scratch/wendlerc/models/%s/"
 model_dir_pattern: "./models/%s/"
 label_smoothing_alpha: 0
