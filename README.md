@@ -18,7 +18,7 @@ In our preprocessing scripts we omitted those.
 ├── datasets <-- molecular and graph datasets
 ├── exp <-- scripts for the pretraining and evaluation
 ├── notebooks <-- some jupyter notebooks
-├── preprocessed <-- precomputed DFS code representations
+├── preprocessed <-- precomputed DFS code representations (you need to download them first see preprocessed/README.md)
 ├── results <-- scripts for the pretraining and evaluation
 ├── scripts <-- scripts for preprocessing data and submitting jobs to the cluster (you hopefully won't need that)
 └── src <-- nn architectures, dataset classes and trainers
@@ -38,6 +38,8 @@ cd dfs-code-representation
 git checkout vertexids
 pip install . 
 ```
+
+Also go to preprocessed README.md and download the preprocessed DFS codes and update the configs in ./config accordingly.
 
 # Baselines
 ```bash
