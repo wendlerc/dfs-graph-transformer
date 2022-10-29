@@ -61,7 +61,6 @@ class KarateClubDataset(Dataset):
         self.maxn = max_n
         self.max_edges = max_edges
         self.features = features
-        self.nystroem = np.load('/'.join(graph_file.split('/')[:-1])+'/wl_nystroem.npy')
         self.min_dfs_flag = min_dfs_flag
         self.preprocess()
     
@@ -76,7 +75,6 @@ class KarateClubDataset(Dataset):
         vlabels_list = []
         elabels_list = []
         label_list = []
-        vec_list = []
         #res_list = Parallel(n_jobs=self.n_jobs, prefer='threads')(
         #    delayed(graph2labelledgraph)(graph, use_degree=use_degree) 
         #    for graph in list(self.graph_dict.values()))
@@ -92,13 +90,12 @@ class KarateClubDataset(Dataset):
             vlabels_list += [res[1]]
             elabels_list += [res[2]]
             label_list += [self.label_df['target'][idx]]
-            vec_list += [self.nystroem[idx]]
             maxdegree = max(maxdegree, max(res[1]))
             max_edges = max(max_edges, len(res[2])//2)
         self.maxdegree = maxdegree
         self.max_edges = max_edges
         
-        def compute_datapoint(edgeindex, vlabels, elabels, label, vec):
+        def compute_datapoint(edgeindex, vlabels, elabels, label):
             node_features = F.one_hot(torch.tensor(vlabels), num_classes=maxdegree+1).float()
             feats = [node_features]
             if use_triangles or use_eccentricity:
@@ -140,7 +137,6 @@ class KarateClubDataset(Dataset):
                            "edge_labels": torch.tensor(elabels, dtype=torch.long),
                            "x": node_features, 
                            "y": torch.tensor(label, dtype=torch.long),
-                           "nystroem": torch.tensor(vec, dtype=torch.float32).unsqueeze(0),
                            "num_nodes": len(node_features),
                            "min_dfs_code": torch.tensor(np.asarray(code)),
                            "min_dfs_index": torch.tensor(np.asarray(index), dtype=torch.long)})
@@ -152,11 +148,10 @@ class KarateClubDataset(Dataset):
                            "edge_labels": torch.tensor(elabels, dtype=torch.long),
                            "x": node_features, 
                            "y": torch.tensor(label, dtype=torch.long),
-                           "nystroem": torch.tensor(vec, dtype=torch.float32).unsqueeze(0),
                            "num_nodes": len(node_features)})
         
-        for edgeindex, vlabels, elabels, label, vec in tqdm.tqdm(zip(edgeindex_list, vlabels_list, elabels_list, label_list, vec_list)):
-            self.data += [compute_datapoint(edgeindex, vlabels, elabels, label, vec)]
+        for edgeindex, vlabels, elabels, label in tqdm.tqdm(zip(edgeindex_list, vlabels_list, elabels_list, label_list)):
+            self.data += [compute_datapoint(edgeindex, vlabels, elabels, label)]
         #self.data = Parallel(n_jobs=self.n_jobs, prefer='threads')(
         #    delayed(compute_datapoint)(edgeindex, vlabels, elabels, label)
         #    for edgeindex, vlabels, elabels, label in zip(edgeindex_list, vlabels_list, elabels_list, label_list))

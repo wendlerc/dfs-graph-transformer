@@ -35,9 +35,6 @@ import torch_geometric.nn as tnn
 import networkx as nx
 from torch_geometric.loader import DataLoader
 
-def loss_pretrain(pred, y, l=nn.MSELoss()):
-    return l(pred, y)
-
 def loss(pred, y, ce=nn.CrossEntropyLoss()):
     return ce(pred, y.squeeze())
 
@@ -54,8 +51,8 @@ parser.add_argument('--wandb_mode', type=str, default="online")
 parser.add_argument('--wandb_group', type=str, default=None)
 parser.add_argument('--wandb_dir', type=str, default="./wandb")
 parser.add_argument('--name', type=str, default=None)
-parser.add_argument('--graph_file', type=str, default="/mnt/ssd/datasets/graphs/reddit_threads/reddit_edges.json")
-parser.add_argument('--label_file', type=str, default="/mnt/ssd/datasets/graphs/reddit_threads/reddit_target.csv")
+parser.add_argument('--graph_file', type=str, default="./datasets/karateclub/reddit_threads/reddit_edges.json")
+parser.add_argument('--label_file', type=str, default="./datasets/karateclub/reddit_threads/reddit_target.csv")
 parser.add_argument('--batch_size', type=int, default=50)
 parser.add_argument('--n_epochs', type=int, default=10)
 parser.add_argument('--learning_rate', type=float, default=0.01)
@@ -68,7 +65,6 @@ parser.add_argument('--n_layers', type=int, default=2)
 parser.add_argument('--model', type=str, default="tnn.models.GCN")
 parser.add_argument('--readout', type=str, default="tnn.global_mean_pool")
 parser.add_argument('--num_workers', type=int, default=0)
-parser.add_argument('--pretrain_flag', action='store_true')
 parser.add_argument('--only_deg_flag', action='store_true')
 parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--start', type=int, default=0)
@@ -78,8 +74,8 @@ args = parser.parse_args()
 config = wandb.config
 config.graph_file = args.graph_file
 config.label_file = args.label_file
-#config.graph_file = "/mnt/ssd/datasets/graphs/twitch_egos/twitch_edges.json"
-#config.label_file = "/mnt/ssd/datasets/graphs/twitch_egos/twitch_target.csv"
+#config.graph_file = "./datasets/karateclub/twitch_egos/twitch_edges.json"
+#config.label_file = "./datasets/karateclub/twitch_egos/twitch_target.csv"
 config.batch_size = args.batch_size
 config.n_epochs = args.n_epochs
 config.learning_rate = args.learning_rate
@@ -96,7 +92,6 @@ config.model = args.model
 config.readout = args.readout
 config.seed = args.seed
 config.training = {}
-config.pretrain_flag = args.pretrain_flag
 config.only_deg_flag = args.only_deg_flag
 
 run = wandb.init(mode=args.wandb_mode, project=args.wandb_project, entity=args.wandb_entity, 
@@ -133,37 +128,18 @@ for perm in perms[config.start:config.end]:
                             batch_size=config.batch_size, num_workers=config.num_workers)
     
     
-    if config.pretrain_flag:
-        gnn = eval(config.model)(dim_input, config.n_channels, config.n_layers, 600)
-        premodel = tnn.Sequential('x, edge_index, batch', [
-            (gnn, 'x, edge_index -> x'),
-            (eval(config.readout), 'x, batch -> x'),
-        ])
-        
-        model = tnn.Sequential('x, edge_index, batch', [
-            (gnn, 'x, edge_index -> x'),
-            (eval(config.readout), 'x, batch -> x'),
-            (nn.Linear(600, 2),'x -> x')
-        ])
-    else:
-        gnn = eval(config.model)(dim_input, config.n_channels, config.n_layers)
-        model = tnn.Sequential('x, edge_index, batch', [
-            (gnn, 'x, edge_index -> x'),
-            (eval(config.readout), 'x, batch -> x'),
-            (nn.Linear(config.n_channels, 2),'x -> x')
-        ])
-    
-    if config.pretrain_flag:
-        pretrainer = TrainerGNN(premodel, trainloader, loss_pretrain, target='nystroem', n_epochs=config.n_epochs, lr=config.learning_rate, 
-                      es_period=n_train//config.batch_size, lr_adjustment_period=10*n_train//config.batch_size//4, wandb_run=run,
-                      clip_gradient_norm=None, lr_patience=5, es_patience=20)
+
+    gnn = eval(config.model)(dim_input, config.n_channels, config.n_layers)
+    model = tnn.Sequential('x, edge_index, batch', [
+        (gnn, 'x, edge_index -> x'),
+        (eval(config.readout), 'x, batch -> x'),
+        (nn.Linear(config.n_channels, 2),'x -> x')
+    ])
     
     trainer = TrainerGNN(model, trainloader, loss, metrics={'auc': auc}, n_epochs=config.n_epochs, lr=config.learning_rate, 
                   es_period=n_train//config.batch_size, lr_adjustment_period=10*n_train//config.batch_size//4, wandb_run=run,
                   clip_gradient_norm=None, lr_patience=5, es_patience=20)
-    
-    if config.pretrain_flag:
-        pretrainer.fit()
+
     trainer.fit()
     
     rocauc = 0.

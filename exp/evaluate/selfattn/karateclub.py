@@ -6,8 +6,6 @@ Created on Fri Feb  4 19:02:08 2022
 @author: chrisw
 """
 
-print('starting imports...')
-
 import json
 import numpy as np
 import glob
@@ -43,8 +41,7 @@ def collate_fn(dlist, use_min=False, rep=1):
     edge_batch = []
     y_batch = []
     rnd_code_batch = []
-    nystroem_batch = []
-    
+
     for d in dlist:
         for r in range(rep):
             edge_features = d.edge_features.clone()
@@ -64,10 +61,8 @@ def collate_fn(dlist, use_min=False, rep=1):
             node_batch += [d.node_features.clone()]
             edge_batch += [edge_features]
             y_batch += [d.y.unsqueeze(0).clone()]
-            nystroem_batch += [d.nystroem.clone()]
 
     y = torch.cat(y_batch).unsqueeze(1)
-    nystroem = torch.cat(nystroem_batch)
 
     
     for inp, nfeats, efeats in zip(rnd_code_batch, node_batch, edge_batch):
@@ -82,15 +77,11 @@ def collate_fn(dlist, use_min=False, rep=1):
 
     dfs_codes = {key: nn.utils.rnn.pad_sequence(values, padding_value=-1000).clone()
                  for key, values in dfs_codes.items()}
-    return dfs_codes, y, nystroem
-
-def collate_train(dlist, use_min=False, rep=1):
-    dfs_codes, y, _ = collate_fn(dlist, use_min=use_min, rep=rep)
     return dfs_codes, y
 
-def collate_pretrain(dlist, use_min=False, rep=1):
-    dfs_codes, _, nystroem = collate_fn(dlist, use_min=use_min, rep=rep)
-    return dfs_codes, nystroem
+def collate_train(dlist, use_min=False, rep=1):
+    dfs_codes, y = collate_fn(dlist, use_min=use_min, rep=rep)
+    return dfs_codes, y
 
 class TransformerCLS(nn.Module):
     def __init__(self, encoder, fingerprint='cls'):
@@ -121,8 +112,6 @@ class TransformerPlusHead(nn.Module):
         output = self.head(features)
         return output
 
-def loss_pretrain(pred, y, l=nn.MSELoss()):
-    return l(pred, y)
 
 def loss(pred, y, ce=nn.CrossEntropyLoss()):
     return ce(pred, y.squeeze())
@@ -135,13 +124,13 @@ def auc(pred, y):
     
 parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
-parser.add_argument('--wandb_project', type=str, default="karateclub-grouped2-rep100")
+parser.add_argument('--wandb_project', type=str, default="karateclub-grouped2-rep100_test")
 parser.add_argument('--wandb_mode', type=str, default="online")
 parser.add_argument('--wandb_dir', type=str, default="./wandb")
 parser.add_argument('--wandb_group', type=str, default=None)
 parser.add_argument('--name', type=str, default=None)
-parser.add_argument('--graph_file', type=str, default="./graphs/reddit_threads/reddit_edges.json")
-parser.add_argument('--label_file', type=str, default="./graphs/reddit_threads/reddit_target.csv")
+parser.add_argument('--graph_file', type=str, default="./datasets/karateclub/reddit_threads/reddit_edges.json")
+parser.add_argument('--label_file', type=str, default="./datasets/karateclub/reddit_threads/reddit_target.csv")
 parser.add_argument('--model_yaml', type=str, default="./config/selfattn/model/bert.yaml")
 parser.add_argument('--nonlinear', action='store_true')
 parser.add_argument('--batch_size', type=int, default=200)
@@ -155,7 +144,6 @@ parser.add_argument('--rep', type=int, default=1)
 parser.add_argument('--max_edges', type=int, default=200)
 parser.add_argument('--n_samples', type=int, default=None)
 parser.add_argument('--num_workers', type=int, default=0)
-parser.add_argument('--pretrain_flag', action='store_true')
 parser.add_argument('--only_deg_flag', action='store_true')
 parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--overwrite', type=json.loads, default="{}")
@@ -167,8 +155,8 @@ print('creating wandb config object')
 config = wandb.config
 config.graph_file = args.graph_file
 config.label_file = args.label_file
-#config.graph_file = "/mnt/ssd/datasets/graphs/twitch_egos/twitch_edges.json"
-#config.label_file = "/mnt/ssd/datasets/graphs/twitch_egos/twitch_target.csv"
+#config.graph_file = "./datasets/karateclub/twitch_egos/twitch_edges.json"
+#config.label_file = "./datasets/karateclub/twitch_egos/twitch_target.csv"
 config.batch_size = args.batch_size
 config.n_epochs = args.n_epochs
 config.learning_rate = args.learning_rate
@@ -185,7 +173,6 @@ config.clip_gradient_norm = args.clip_gradient_norm
 config.num_workers = args.num_workers
 config.seed = args.seed
 config.training = {}
-config.pretrain_flag = args.pretrain_flag
 config.only_deg_flag = args.only_deg_flag
 config.device=args.device
 
@@ -209,7 +196,6 @@ m["use_min"] = args.use_min
 
 dim_input = dataset[0].x.shape[1]
 collate_train_ = functools.partial(collate_train, use_min=m['use_min'], rep=config.rep)
-collate_pretrain_ = functools.partial(collate_pretrain, use_min=m['use_min'], rep=config.rep)
 
 loader = DataLoader(dataset,  
                     batch_size=config.batch_size, collate_fn=collate_train_,
@@ -256,35 +242,17 @@ for perm in perms[config.start:config.end]:
     testloader = DataLoader(dataset, sampler=torch.utils.data.SubsetRandomSampler(test_idx), 
                             batch_size=config.batch_size, collate_fn=collate_train_,
                              num_workers=config.num_workers)
-    pretrainloader = DataLoader(dataset, sampler=torch.utils.data.SubsetRandomSampler(train_idx), 
-                             batch_size=config.batch_size, collate_fn=collate_pretrain_,
-                             num_workers=config.num_workers)
-    prevalidloader = DataLoader(dataset, sampler=torch.utils.data.SubsetRandomSampler(valid_idx), 
-                             batch_size=config.batch_size, collate_fn=collate_pretrain_,
-                             num_workers=config.num_workers)
-    pretestloader = DataLoader(dataset, sampler=torch.utils.data.SubsetRandomSampler(test_idx), 
-                            batch_size=config.batch_size, collate_fn=collate_pretrain_,
-                             num_workers=config.num_workers)
     
-    if config.pretrain_flag:
-        encoder = DFSCodeSeq2SeqFC(**m)
-        premodel = TransformerCLS(encoder)
-        model = TransformerPlusHead(encoder, 2, linear=not config.nonlinear)
-    else:
-        encoder = DFSCodeSeq2SeqFC(**m)
-        model = TransformerPlusHead(encoder, 2, linear=not config.nonlinear)
-    
-    if config.pretrain_flag:
-        pretrainer = Trainer(premodel, pretrainloader, loss_pretrain, lr=config.learning_rate, validloader=pretestloader, 
-                  es_period=1*n_train//config.batch_size, lr_adjustment_period=10*n_train//config.batch_size//4, wandb_run=run,
-                  clip_gradient_norm=config.clip_gradient_norm, n_epochs=config.n_epochs, device=device)
+
+    encoder = DFSCodeSeq2SeqFC(**m)
+    model = TransformerPlusHead(encoder, 2, linear=not config.nonlinear)
+
     
     trainer = Trainer(model, trainloader, loss, metrics={'auc': auc}, lr=config.learning_rate, validloader=testloader, 
                   es_period=1*n_train//config.batch_size, lr_adjustment_period=10*n_train//config.batch_size//4, wandb_run=run,
                   clip_gradient_norm=config.clip_gradient_norm, n_epochs=config.n_epochs, device=device)
     
-    if config.pretrain_flag:
-        pretrainer.fit()
+
     trainer.fit()
     
     rocauc = 0.

@@ -14,11 +14,14 @@ In our preprocessing scripts we omitted those.
 ### Code structure
 ```
 .
-├── config <-- main directory
-├── datasets
-├── preprocessed
-├── exp
-└── src
+├── config <-- yaml files containing configs for the scripts in ./exp
+├── datasets <-- molecular and graph datasets
+├── exp <-- scripts for the pretraining and evaluation
+├── notebooks <-- some jupyter notebooks
+├── preprocessed <-- precomputed DFS code representations
+├── results <-- scripts for the pretraining and evaluation
+├── scripts <-- scripts for preprocessing data and submitting jobs to the cluster (you hopefully won't need that)
+└── src <-- nn architectures, dataset classes and trainers
 
 ```
 
@@ -68,6 +71,10 @@ python exp/pretrain/selfattn/pubchem_plus_properties.py --wandb_entity dfstransf
 
 For the evaluation to work, make sure to download ... and update ./config/selfattn/finetune_moleculenet.yaml accordingly.
 
+### Pretrained models
+
+Here are some of my pretrained models for molecular data: https://wandb.ai/dfstransformer/pubchem_newencoding 
+
 ### Use pretrained features 
 
 The evaluation script is parametrized by the config file ./config/selfattn/moleculenet.yaml.
@@ -86,7 +93,34 @@ python exp/evaluate/selfattn/finetune_moleculenet.py --wandb_entity dfstransform
 
 ```
 
-# Other graphs
+# Karateclub
+
+DFS codes can be also computed for other graphs. Here I considered two karateclub datasets: reddit_threads and twitch_egos. Each of these datasets consists of two files
+reddit_edges.json and reddit_target.csv, twitch_edges.json and twitch_target.csv respectively. Paths to these files can be supplied via --graph_file which expects a path 
+to the json and --label_file which expects a path to the csv. For performance reasons (the DFS code transformer's attention matrix is quadratic in the number of edges), 
+we only consider graphs with less or equal 200 edges --max_edges 200.
+
+## Run torch geometric baselines
+
+Toch geometric models can be supplied via the --model argument. In the file I import torch_geometric.nn as tnn. 
+Suitable choices are, e.g., tnn.models.GCN or tnn.models.GIN.
+
+```bash
+python exp/evaluate/gnn/karateclub.py --wandb_entity dfstransformer --wandb_project karateclub --model nn.models.GCN
+```
+
+For prototyping the --n_samples parameter is useful as it allows to run on a subset of the dataset
+
+```bash
+python exp/evaluate/gnn/karateclub.py --wandb_entity dfstransformer --wandb_project karateclub --model nn.models.GIN --n_samples 10000
+```
+
+## Run DFS code transformer 
+
+```bash
+python exp/evaluate/selfattn/karateclub.py 
+```
+
 
 
 
