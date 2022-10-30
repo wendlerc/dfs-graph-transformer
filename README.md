@@ -56,7 +56,7 @@ experiments are in ./exp and configuration files are in ./config.
 
 ## Pretraining
 
-For the pretraining to work, make sure to download ... and update the config files in ./config/selfattn/data accordingly. 
+For the pretraining to work, make sure to download https://www.icloud.com/iclouddrive/0d7bts2-v_f4d7GvCV03HrV5Q#pubchem and update the config files in ./config/selfattn/data accordingly. 
 
 The parametrization of the training loop in the pretraining script is a bit unconventional. This is because the pretraining dataset with 10 million 
 molecules (not provided) does not fit into memory on my machines. I store large datasets by splitting them into several parts of equal size (number of molecules). 
@@ -71,7 +71,7 @@ python exp/pretrain/selfattn/pubchem_plus_properties.py --wandb_entity dfstransf
 
 ## Evaluation
 
-For the evaluation to work, make sure to download ... and update ./config/selfattn/finetune_moleculenet.yaml accordingly.
+For the evaluation to work, make sure to download https://www.icloud.com/iclouddrive/0b5IUU6Yzd4QmU5jt3IrHJQ_Q#mymoleculenet%5Fplus%5Ffeatures and update ./config/selfattn/finetune_moleculenet.yaml accordingly.
 
 ### Pretrained models
 
