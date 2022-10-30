@@ -71,7 +71,7 @@ python exp/pretrain/selfattn/pubchem_plus_properties.py --wandb_entity dfstransf
 
 ## Evaluation
 
-For the evaluation to work, make sure to download https://www.icloud.com/iclouddrive/0b5IUU6Yzd4QmU5jt3IrHJQ_Q#mymoleculenet%5Fplus%5Ffeatures and update ./config/selfattn/finetune_moleculenet.yaml accordingly.
+For the evaluation to work, make sure to download https://www.icloud.com/iclouddrive/0b5IUU6Yzd4QmU5jt3IrHJQ_Q#mymoleculenet%5Fplus%5Ffeatures and update ./config/selfattn/moleculenet.yaml and ./config/selfattn/finetune_moleculenet.yaml accordingly.
 
 ### Pretrained models
 
