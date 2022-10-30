@@ -35,7 +35,6 @@ pip install dgl-cu102 -f https://data.dgl.ai/wheels/repo.html
 
 git clone git@github.com:ElizaWszola/dfs-code-representation.git
 cd dfs-code-representation
-git checkout vertexids
 pip install . 
 ```
 
