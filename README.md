@@ -97,6 +97,8 @@ python exp/evaluate/selfattn/finetune_moleculenet.py --wandb_entity dfstransform
 
 # Karateclub
 
+For this dataset to work, download https://www.icloud.com/iclouddrive/09fslwInJA2i6grbE2Dm9e9mw#karateclub and store it in ./datasets.
+
 DFS codes can be also computed for other graphs. Here I considered two karateclub datasets: reddit_threads and twitch_egos. Each of these datasets consists of two files
 reddit_edges.json and reddit_target.csv, twitch_edges.json and twitch_target.csv respectively. Paths to these files can be supplied via --graph_file which expects a path 
 to the json and --label_file which expects a path to the csv. For performance reasons (the DFS code transformer's attention matrix is quadratic in the number of edges), 
