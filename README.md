@@ -144,7 +144,7 @@ For this dataset to work, download [[karateclub dataset]](https://www.icloud.com
 DFS codes can be also computed for other graphs. Here I considered two karateclub datasets: reddit_threads and twitch_egos. Each of these datasets consists of two files
 reddit_edges.json and reddit_target.csv, twitch_edges.json and twitch_target.csv respectively. Paths to these files can be supplied via --graph_file which expects a path 
 to the json and --label_file which expects a path to the csv. For performance reasons (the DFS code transformer's attention matrix is quadratic in the number of edges), 
-we only consider graphs with less or equal 200 edges --max_edges 200.
+we only consider graphs with less or equal 200 edges --max_edges 200. Furthermore, because the computation of minimum DFS codes was very slow for these datasets and the random ones performed quite well on the molecular data we only consider random DFS codes.
 
 ## Run torch geometric baselines
 
