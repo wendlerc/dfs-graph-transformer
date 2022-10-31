@@ -7,6 +7,27 @@ sequences it is possible to associate graphs with minimal DFS codes which are un
 That is, isomorphic graphs have the same minimal DFS codes. For a formal description of DFS codes have a
 look at [./notes/dfs_codes.pdf](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/dfs_codes.pdf).
 
+For example consider the following molecule:
+
+![smiles](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/molecule_plus_dfs_indices.png)
+
+Its minimal DFS code is
+```
+[[ 0,  1,  6,  0,  6], [ 1,  2,  6,  0,  7], [ 2,  3,  7,  0,  6],
+ [ 3,  4,  6,  0,  6], [ 4,  5,  6,  2,  6], [ 5,  6,  6,  0,  6],
+ [ 5,  7,  6,  2,  6], [ 7,  8,  6,  2,  6], [ 8,  9,  6,  0,  9],
+ [ 8, 10,  6,  2,  6], [10, 11,  6,  2,  6], [11,  4,  6,  2,  6],
+ [ 3, 12,  6,  1,  8], [ 2, 13,  7,  0,  6], [ 0, 14,  6,  2,  6],
+ [14, 15,  6,  0,  6], [14, 16,  6,  2,  7], [16, 17,  7,  2,  6],
+ [17, 18,  6,  2,  7], [18,  0,  7,  2,  6], [18, 19,  7,  2,  6],
+ [19, 20,  6,  2,  6], [20, 21,  6,  0,  6], [20, 22,  6,  2, 16],
+ [22, 17, 16,  2,  6]],
+ ```
+ in which each 5-tuple is of the form `[dfs index from, dfs index to, atomic number from, bond type, atomic number to]`. 
+ In the above example the following atomic numbers: `{'C': 6, 'N': 7, 'O':8, 'F':9, 'N':16}` and the following bond types
+ `{'single': 0, 'double': 1, 'aromatic': 2}` occur.
+ 
+ 
 
 
 For very symmetrical molecules the computation of the minimal DFS codes can become extremely slow. 
