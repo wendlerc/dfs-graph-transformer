@@ -1,10 +1,13 @@
 # Graph transformers based on depth first search codes
 
-We represent graphs as sequences of edges (so called DFS codes) and process them using transformers.
+We represent graphs as sequences of edges (so called DFS codes) and process them using transformers. 
 DFS codes correspond to depth first search (DFS) traversals of graphs. In particular, they record edges 
 in the order in which they are encoundered using DFS. By defining a total order on the space of all such 
 sequences it is possible to associate graphs with minimal DFS codes which are unique up to graph isomorphy.
-That is, isomorphic graphs have the same minimal DFS codes. 
+That is, isomorphic graphs have the same minimal DFS codes. For a formal description of DFS codes have a
+look at [./notes/dfs_codes.pdf](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/dfs_codes.pdf).
+
+
 
 For very symmetrical molecules the computation of the minimal DFS codes can become extremely slow. 
 In our preprocessing scripts we omitted those.
@@ -55,7 +58,9 @@ experiments are in ./exp and configuration files are in ./config.
 
 ## Pretraining
 
-For the pretraining to work, make sure to download https://www.icloud.com/iclouddrive/0d7bts2-v_f4d7GvCV03HrV5Q#pubchem and update the config files in ./config/selfattn/data accordingly. 
+For the pretraining to work, make sure to download 
+[[pubchem preprocessed]](https://www.icloud.com/iclouddrive/0d7bts2-v_f4d7GvCV03HrV5Q#pubchem)
+ and update the config files in ./config/selfattn/data accordingly. 
 
 The parametrization of the training loop in the pretraining script is a bit unconventional. This is because the pretraining dataset with 10 million 
 molecules (not provided) does not fit into memory on my machines. I store large datasets by splitting them into several parts of equal size (number of molecules). 
@@ -70,11 +75,13 @@ python exp/pretrain/selfattn/pubchem_plus_properties.py --wandb_entity dfstransf
 
 ## Evaluation
 
-For the evaluation to work, make sure to download https://www.icloud.com/iclouddrive/0b5IUU6Yzd4QmU5jt3IrHJQ_Q#mymoleculenet%5Fplus%5Ffeatures and update ./config/selfattn/moleculenet.yaml and ./config/selfattn/finetune_moleculenet.yaml accordingly.
+For the evaluation to work, make sure to download 
+[[moleculenet preprocessed]](https://www.icloud.com/iclouddrive/0b5IUU6Yzd4QmU5jt3IrHJQ_Q#mymoleculenet%5Fplus%5Ffeatures)
+ and update ./config/selfattn/moleculenet.yaml and ./config/selfattn/finetune_moleculenet.yaml accordingly.
 
 ### Pretrained models
 
-Here are some of my pretrained models for molecular data: https://wandb.ai/dfstransformer/pubchem_newencoding 
+[Here](https://wandb.ai/dfstransformer/pubchem_newencoding) are some of my pretrained models for molecular data.
 
 ### Use pretrained features 
 
@@ -96,7 +103,7 @@ python exp/evaluate/selfattn/finetune_moleculenet.py --wandb_entity dfstransform
 
 # Karateclub
 
-For this dataset to work, download https://www.icloud.com/iclouddrive/09fslwInJA2i6grbE2Dm9e9mw#karateclub and store it in ./datasets.
+For this dataset to work, download [[karateclub dataset]](https://www.icloud.com/iclouddrive/09fslwInJA2i6grbE2Dm9e9mw#karateclub) and store it in ./datasets.
 
 DFS codes can be also computed for other graphs. Here I considered two karateclub datasets: reddit_threads and twitch_egos. Each of these datasets consists of two files
 reddit_edges.json and reddit_target.csv, twitch_edges.json and twitch_target.csv respectively. Paths to these files can be supplied via --graph_file which expects a path 
