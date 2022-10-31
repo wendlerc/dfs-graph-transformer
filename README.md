@@ -63,7 +63,7 @@ We compare the following methods:
 * DFS M2M rdprop: DFS M2M where we pretrained by predicting several molecular properties computed with rdkit from the cls token,
 * DFS R2R both: DFS R2R where we pretrained using both pretraining strategies,
 * DFS M2M both: DFS M2M where we pretrained using both pretraining strategies,
-* [ChemBERTA](https://arxiv.org/abs/2010.09885](https://github.com/gmum/huggingmolecules): a smiles transformer,
+* [ChemBERTA](https://github.com/gmum/huggingmolecules): a smiles transformer,
 * [MAT 20M](https://github.com/gmum/huggingmolecules): a graph transformer,
 * D-MPNN: a message passing neural network,
 on the four molecular property prediction tasks from moleculenet.
