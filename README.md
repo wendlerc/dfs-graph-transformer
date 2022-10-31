@@ -46,7 +46,7 @@ The corresponding values are tensors containing:
 
 For the reported results we used pytorch's [TransformerEncoder](https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoder.html) with 6 [layers](https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html#torch.nn.TransformerEncoderLayer), with `d_model=600, nhead=12, dim_feedforward=2048, activation='gelu'`. 
 
-We use d_model=600 because we encode each of the components of the 5-tuples using 120 features. For 'dfs_from' and 'dfs_to' we use trigonometric positional encodings. For 'atm_from', 'atm_to' and 'bnd' we train a linear encoding layer. The resulting 5 feature vectors per edge are concatenated and mixed using another linear layer.
+We use `d_model=600` because we encode each of the components of the 5-tuples using 120 features. For `'dfs_from'` and `'dfs_to'` we use trigonometric positional encodings. For `'atm_from', 'atm_to'` and `'bnd'` we train a linear encoding layer. The resulting 5 feature vectors per edge are concatenated and mixed using another linear layer.
 
 # Project structure
 
