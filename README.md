@@ -4,8 +4,7 @@ We represent graphs as sequences of edges (so called DFS codes) and process them
 DFS codes correspond to depth first search (DFS) traversals of graphs. In particular, they record edges 
 in the order in which they are encoundered using DFS. By defining a total order on the space of all such 
 sequences it is possible to associate graphs with minimum DFS codes which are unique up to graph isomorphy.
-That is, isomorphic graphs have the same minimum DFS codes. For a formal description of DFS codes have a
-look at [./notes/dfs_codes.pdf](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/dfs_codes.pdf).
+That is, isomorphic graphs have the same minimum DFS codes. 
 
 For example consider the following molecule
 
@@ -26,10 +25,14 @@ Its SMILES representation is `Cc1cc(F)ccc1C(=O)N(C)Cc1c(C)nc2scc(C)n12` and its 
  ```
  in which each 5-tuple is of the form `[dfs index from, dfs index to, atomic number from, bond type, atomic number to]`. 
  In the above example the following atomic numbers: `{'C': 6, 'N': 7, 'O':8, 'F':9, 'N':16}` and the following bond types
- `{'single': 0, 'double': 1, 'aromatic': 2}` occur.
- 
-For very symmetrical molecules the computation of the minimal DFS codes can become extremely slow. 
-In our preprocessing scripts we omitted those.
+ `{'single': 0, 'double': 1, 'aromatic': 2}` occur. The red part of the molecule corresponds to `[18, 19,  7,  2,  6],
+ [19, 20,  6,  2,  6], [20, 21,  6,  0,  6], [20, 22,  6,  2, 16],
+ [22, 17, 16,  2,  6]]`.
+
+For a formal description of DFS codes have a
+look at [./notes/dfs_codes.pdf](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/dfs_codes.pdf).
+
+For very symmetrical molecules the computation of the minimal DFS codes can become extremely slow. Thus, we omitted those during preprocessing. 
 
 # Project structure
 
