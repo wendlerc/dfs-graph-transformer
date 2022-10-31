@@ -34,6 +34,20 @@ look at [./notes/dfs_codes.pdf](https://github.com/chrislybaer/dfs-graph-transfo
 
 For very symmetrical molecules the computation of the minimal DFS codes can become extremely slow. Thus, we omitted those during preprocessing. 
 
+# Architecture and encoding
+
+We represent DFS codes as dictionaries with one key per component: 'dfs_from', 'dfs_to', 'atm_from', 'atm_to', 'bnd'.
+The corresponding values are tensors containing:
+* 'dfs_from': sequences of DFS indices of a batch `max_len x batch_size`,
+* 'dfs_to': sequences of DFS indices of a batch `max_len x batch_size`,
+* 'atm_from': sequences of atomic numbers and other vertex features of a batch `max_len x batch_size x num_feat_vert`,
+* 'atm_to': sequences of atomic numbers and other vertex features of a batch `max_len x batch_size x num_feat_vert`,
+* 'bnd': sequences of bond types and other bond features of a batch `max_len x batch_size x num_feat_edge`.
+
+For the reported results we used pytorch's [TransformerEncoder](https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoder.html) with 6 [layers](https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html#torch.nn.TransformerEncoderLayer), with d_model=600, nhead=12, dim_feedforward=2048, activation='gelu'. 
+
+We use d_model=600 because we encode each of the components of the 5-tuples using 120 features. For 'dfs_from' and 'dfs_to' we use trigonometric positional encodings. For 'atm_from', 'atm_to' and 'bnd' we train a linear encoding layer. The resulting 5 feature vectors per edge are concatenated and mixed using another linear layer.
+
 # Project structure
 
 ### Code structure
