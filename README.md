@@ -48,6 +48,28 @@ For the reported results we used pytorch's [TransformerEncoder](https://pytorch.
 
 We use `d_model=600` because we encode each of the components of the 5-tuples using 120 features. For `'dfs_from'` and `'dfs_to'` we use trigonometric positional encodings. For `'atm_from', 'atm_to'` and `'bnd'` we train a linear encoding layer. The resulting 5 feature vectors per edge are concatenated and mixed using another linear layer.
 
+# Results
+
+## Molecular data
+
+### Moleculenet
+
+We compare the following methods:
+* DFS R2R: a DFS code transformer where we represent the molecules using random DFS codes (that is starting the DFS from some random atom and not taking the minimality into account),
+* DFS M2M: a DFS code transformer where we represent the molecules using minimum DFS codes,
+* DFS R2R BERT: DFS R2R with BERT pretraining,
+* DFS M2M BERT: DFS M2M with BERT pretraining, 
+* DFS R2R rdprop: DFS R2R where we pretrained by predicting several molecular properties computed with rdkit from the cls token,
+* DFS M2M rdprop: DFS M2M where we pretrained by predicting several molecular properties computed with rdkit from the cls token,
+* DFS R2R both: DFS R2R where we pretrained using both pretraining strategies,
+* DFS M2M both: DFS M2M where we pretrained using both pretraining strategies,
+* [ChemBERTA](https://arxiv.org/abs/2010.09885](https://github.com/gmum/huggingmolecules): a smiles transformer,
+* [MAT 20M](https://github.com/gmum/huggingmolecules): a graph transformer,
+* D-MPNN: a message passing neural network,
+on the four molecular property prediction tasks from moleculenet.
+
+![Moleculenet result](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/moleculenet_result.png)
+
 # Project structure
 
 ### Code structure
