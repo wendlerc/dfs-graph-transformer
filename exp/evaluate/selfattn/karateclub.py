@@ -124,7 +124,7 @@ def auc(pred, y):
     
 parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_entity', type=str, default="dfstransformer")
-parser.add_argument('--wandb_project', type=str, default="karateclub-grouped2-rep100_test")
+parser.add_argument('--wandb_project', type=str, default="karateclub-grouped2-rep100")
 parser.add_argument('--wandb_mode', type=str, default="online")
 parser.add_argument('--wandb_dir', type=str, default="./wandb")
 parser.add_argument('--wandb_group', type=str, default=None)

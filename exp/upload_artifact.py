@@ -19,9 +19,7 @@ parser.set_defaults(loops=False)
 args = parser.parse_args()
     
 
-
-wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
-run = wandb.init(mode=args.wandb_mode, 
+run = wandb.init(mode=args.wandb_mode,
                  project=args.wandb_project, 
                  entity=args.wandb_entity, 
                  name=args.name, job_type="upload artefact")

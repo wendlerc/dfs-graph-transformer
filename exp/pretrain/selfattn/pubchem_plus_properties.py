@@ -72,8 +72,7 @@ if __name__ == "__main__":
     if config.data.useDists:
         config.model.n_edge_features += 50 #TODO: clean this up...
     
-    wandb.login(key="5c53eb61039d99e4467ef1fccd1d035bb84c1c21")
-    run = wandb.init(mode=args.wandb_mode, 
+    run = wandb.init(mode=args.wandb_mode,
                      project=args.wandb_project, 
                      entity=args.wandb_entity, 
                      name=args.name, config=config.to_dict(), settings=wandb.Settings(start_method='fork'))

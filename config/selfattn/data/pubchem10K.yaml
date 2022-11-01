@@ -2,10 +2,8 @@ n_used: null # set this to 4 if you use the 10M and null otherwise
 n_iter_per_split: 100 # the data is split in the preprocessing step into n shards,
     # n_used determines how many of these shards to process at once and n_iter_per_split 
     # determines how many passes to do over this split
-#path: "/cluster/work/pueschel/wendler/pubchem/10K/"
-#valid_path: "/cluster/work/pueschel/wendler/pubchem/validation/"
-path: "/home/chrisw/Documents/projects/2021/graph-transformer-feature-dataloader/results/pubchem/noH/10K/"
-valid_path: "/home/chrisw/Documents/projects/2021/graph-transformer-feature-dataloader/results/pubchem/noH/validation/"
+path: "./preprocessed/pubchem/10K/"
+valid_path: "./preprocessed/pubchem/validation/"
 max_nodes: 110
 max_edges: 110
 molecular_properties: null
