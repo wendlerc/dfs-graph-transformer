@@ -66,9 +66,38 @@ We compare the following methods:
 * [ChemBERTA](https://github.com/gmum/huggingmolecules): a smiles transformer,
 * [MAT 20M](https://github.com/gmum/huggingmolecules): a graph transformer,
 * D-MPNN: a message passing neural network,
-on the four molecular property prediction tasks from moleculenet.
+on four molecular property prediction tasks from moleculenet.
 
 ![Moleculenet result](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/moleculenet_result.png)
+
+### Analysis of BERT pretraining
+
+We analyze our DFS code transformers that we have trained using variations of the BERT objective. In particular, we check how many of the 
+molecules output by our transformers are valid molecules and how many of the valid ones are novel (i.e., how many got changed by masking and filling back in).
+
+![Molecular data analysis](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/chemical_validity.png)
+
+Windowsize 3 (W3) means that when masking we always masked windows of size 3, that is instead of masking only the random
+position i, we mask i-1, i and i+1.
+
+## Karateclub
+
+Our DFS code transformer is not limited to molecular graphs. To showcase this, we also evaluated it on two of the karateclub graph classification datasets. Because of the quadratic cost of our attention we limit to the ones with few edges. On top of that we keep only graphs with `<= 200` edges.
+
+We compare the following methods:
+* DFS R2R: a DFS code transformer where we represent graphs with random DFS codes,
+* [GIN](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#torch_geometric.nn.models.GIN): a graph isomorphism network,
+* [GCN](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#torch_geometric.nn.models.GCN): a graph convolutional neural network,
+* feature-sum: sum up all the vertex features to get a graph feature vector, 
+* histogram: use histogram as graph feature vector,
+* [WL-kernel](https://ysig.github.io/GraKeL/0.1a8/generated/grakel.GraphKernel.html#grakel.GraphKernel): use Weisfeiler-Lehman kernel,
+* [FEATHER](https://github.com/benedekrozemberczki/FEATHER): use FEATHER method,
+once using only the vertex degrees as features and once also using some topological features (number of triangles containing the vertex and eccentricity).
+
+We report ROC-AUC scores. 
+
+![Karateclub result](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/karateclub_result.png)
+
 
 # Project structure
 
@@ -79,6 +108,7 @@ on the four molecular property prediction tasks from moleculenet.
 ├── datasets <-- molecular and graph datasets
 ├── exp <-- scripts for the pretraining and evaluation
 ├── notebooks <-- some jupyter notebooks
+├── notes <-- some notes
 ├── preprocessed <-- precomputed DFS code representations (you need to download them first see preprocessed/README.md)
 ├── results <-- scripts for the pretraining and evaluation
 ├── scripts <-- scripts for preprocessing data and submitting jobs to the cluster (you hopefully won't need that)
