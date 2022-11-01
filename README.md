@@ -8,7 +8,7 @@ That is, isomorphic graphs have the same minimum DFS codes.
 
 For example consider the following molecule
 
-![Cc1cc(F)ccc1C(=O)N(C)Cc1c(C)nc2scc(C)n12](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/molecule_plus_dfs_indices.png)
+![Cc1cc(F)ccc1C(=O)N(C)Cc1c(C)nc2scc(C)n12](./notes/molecule_plus_dfs_indices.png)
 
 where we annotated each atom with its `dfs index`, i.e., the step in which it is visited by DFS. 
 Its SMILES representation is `Cc1cc(F)ccc1C(=O)N(C)Cc1c(C)nc2scc(C)n12` and its minimum DFS code is
@@ -30,7 +30,7 @@ Its SMILES representation is `Cc1cc(F)ccc1C(=O)N(C)Cc1c(C)nc2scc(C)n12` and its 
  [22, 17, 16,  2,  6]]`.
 
 For a formal description of DFS codes have a
-look at [./notes/dfs_codes.pdf](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/dfs_codes.pdf).
+look at [./notes/dfs_codes.pdf](./notes/dfs_codes.pdf).
 
 For very symmetrical molecules the computation of the minimal DFS codes can become extremely slow. Thus, we omitted those during preprocessing. 
 
@@ -68,14 +68,14 @@ We compare the following methods:
 * D-MPNN: a message passing neural network,
 on four molecular property prediction tasks from moleculenet.
 
-![Moleculenet result](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/moleculenet_result.png)
+![Moleculenet result](./notes/moleculenet_result.png)
 
 ### Analysis of BERT pretraining
 
 We analyze our DFS code transformers that we have trained using variations of the BERT objective. In particular, we check how many of the 
 molecules output by our transformers are valid molecules and how many of the valid ones are novel (i.e., how many got changed by masking and filling back in).
 
-![Molecular data analysis](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/chemical_validity.png)
+![Molecular data analysis](./notes/chemical_validity.png)
 
 Windowsize 3 (W3) means that when masking we always masked windows of size 3, that is instead of masking only the random
 position i, we mask i-1, i and i+1.
@@ -96,7 +96,7 @@ once using only the vertex degrees as features and once also using some topologi
 
 We report ROC-AUC scores. 
 
-![Karateclub result](https://github.com/chrislybaer/dfs-graph-transformer/blob/main/notes/karateclub_result.png)
+![Karateclub result](./notes/karateclub_result.png)
 
 
 # Project structure
