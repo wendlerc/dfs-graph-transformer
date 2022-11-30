@@ -1,3 +1,22 @@
+# Foreword
+
+I worked on this project in the scope of my PhD approximately from July 2021 to February 2022, when I noticed that 
+the main idea of this project, i.e., to use DFS codes as a sequence representation of graphs to build novel graph transformers,
+was published in the meantime in:
+
+```
+@inproceedings{gupta2021graph,
+  title={Graph Classification with Minimum DFS Code: Improving Graph Neural Network Expressivity},
+  author={Gupta, Jhalak and Khan, Arijit},
+  booktitle={2021 IEEE International Conference on Big Data (Big Data)},
+  pages={5133--5142},
+  year={2021},
+  organization={IEEE}
+}
+```
+which is probably a good resource to get a better understanding of this project. In contrast to the above reference, here we additionally do selfsupervised pretraining on molecular graphs and classification on other, non-molecular, graph.
+
+
 # Graph transformers based on depth first search codes
 
 We represent graphs as sequences of edges (so called DFS codes) and process them using transformers. 
