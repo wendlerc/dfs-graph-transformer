@@ -1,6 +1,6 @@
 # Foreword
 
-I worked on this project in the scope of my PhD approximately from July 2021 to February 2022, when I noticed that 
+I worked on this project in the scope of my PhD approximately from July 2021 to February 2022 (see commits). At some point I noticed that 
 the main idea of this project, i.e., to use DFS codes as a sequence representation of graphs to build novel graph transformers,
 was published in the meantime in:
 
@@ -14,7 +14,7 @@ was published in the meantime in:
   organization={IEEE}
 }
 ```
-which is probably a good resource to get a better understanding of this project. In contrast to the above reference, here we additionally do selfsupervised pretraining on molecular graphs and classification on other, non-molecular, graph.
+This reference is probably a good resource to get a better understanding of this project. In contrast to the this reference, here we additionally do selfsupervised pretraining on molecular graphs and classification on other, non-molecular, graph.
 
 
 # Graph transformers based on depth first search codes
