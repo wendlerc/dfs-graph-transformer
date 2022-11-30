@@ -14,7 +14,7 @@ was published in the meantime in:
   organization={IEEE}
 }
 ```
-This reference is probably a good resource to get a better understanding of this project. In contrast to the this reference, here we additionally do selfsupervised pretraining on molecular graphs and classification on other, non-molecular, graph.
+Above reference is probably a good resource to get a better understanding of this project. In contrast to the above reference, here we additionally do selfsupervised pretraining on molecular graphs and classification on other, non-molecular, graph.
 
 
 # Graph transformers based on depth first search codes
