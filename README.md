@@ -92,6 +92,7 @@ We compare the following methods:
 * histogram: use histogram as graph feature vector,
 * [WL-kernel](https://ysig.github.io/GraKeL/0.1a8/generated/grakel.GraphKernel.html#grakel.GraphKernel): use Weisfeiler-Lehman kernel,
 * [FEATHER](https://github.com/benedekrozemberczki/FEATHER): use FEATHER method,
+
 once using only the vertex degrees as features and once also using some topological features (number of triangles containing the vertex and eccentricity).
 
 We report ROC-AUC scores. 
