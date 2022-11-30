@@ -170,7 +170,7 @@ For the evaluation to work, make sure to download
 
 ### Pretrained models
 
-[Here](https://wandb.ai/dfstransformer/pubchem_newencoding) are some of my pretrained models for molecular data.
+[Here](https://wandb.ai/dfstransformer/pubchem_newencoding/artifacts) are some of my pretrained models for molecular data.
 
 ### Use pretrained features 
 
