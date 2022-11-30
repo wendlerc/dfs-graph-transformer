@@ -153,7 +153,7 @@ For the pretraining to work, make sure to download
 
 The parametrization of the training loop in the pretraining script is a bit unconventional. This is because the pretraining dataset with 10 million 
 molecules (not provided) does not fit into memory on my machines. I store large datasets by splitting them into several parts of equal size (number of molecules). 
-Then in the outer loop that does n_epochs repetitions a subset of the splits is complsed into a torch dataset. The inner loop then performs n_iter_per_split 
+Then in the outer loop that does n_epochs repetitions a subset of the splits is composed into a torch dataset. The inner loop then performs n_iter_per_split 
 passes over this dataset and so on. If all splits fit into memory I recommend using n_epochs=1 and n_iter_per_split=<desired_number_of_epochs>, e.g., 
 n_iter_per_split=10. If at least es_period (default=1000) batches have been processed the final checkpoint is uploaded as a wandb artifact for later use.
 Please make sure to set --wandb_entity, --wandb_project accordingly. --overwrite is used to overwrite parameters that are set via config files.
